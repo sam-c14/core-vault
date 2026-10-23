@@ -15,7 +15,10 @@ pub enum CoreError {
     InvalidCurrency(String),
 
     #[error("Insufficient funds: available {available}, required {required}")]
-    InsufficientFunds { available: Decimal, required: Decimal },
+    InsufficientFunds {
+        available: Decimal,
+        required: Decimal,
+    },
 
     #[error("Account not active: account {0}")]
     AccountInactive(String),

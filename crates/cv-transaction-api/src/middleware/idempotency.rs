@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use std::collections::HashMap;
 
 /// In-memory and Valkey compatible idempotency state tracker
 #[derive(Clone, Default)]

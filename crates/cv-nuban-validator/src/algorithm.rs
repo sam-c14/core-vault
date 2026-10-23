@@ -27,13 +27,21 @@ pub fn calculate_check_digit(bank_code: &str, serial: &str) -> Result<u8, NubanE
     }
 
     let mut sum = 0;
-    for (ch, &weight) in bank_code.chars().chain(serial.chars()).zip(NUBAN_WEIGHTS.iter()) {
+    for (ch, &weight) in bank_code
+        .chars()
+        .chain(serial.chars())
+        .zip(NUBAN_WEIGHTS.iter())
+    {
         let digit = ch.to_digit(10).ok_or(NubanError::NonNumericDigit)?;
         sum += digit * weight;
     }
 
     let remainder = sum % 10;
-    Ok(if remainder == 0 { 0 } else { (10 - remainder) as u8 })
+    Ok(if remainder == 0 {
+        0
+    } else {
+        (10 - remainder) as u8
+    })
 }
 
 pub fn generate_nuban(bank_code: &str, serial_num: u32) -> Result<String, NubanError> {

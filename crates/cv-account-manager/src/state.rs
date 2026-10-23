@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use cv_types::{AccountId, AccountStatus, AccountType, Currency};
+use cv_types::{AccountId, AccountStatus, AccountType, Currency, PndSource};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,6 +19,8 @@ pub struct AccountRecord {
     pub lien_amount: Decimal,
     pub overdraft_limit: Decimal,
     pub status: AccountStatus,
+    pub pnd_source: Option<PndSource>,
+    pub pnd_reason: Option<String>,
     pub version: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

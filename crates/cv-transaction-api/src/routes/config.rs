@@ -6,7 +6,10 @@ use std::path::PathBuf;
 pub fn router() -> Router {
     Router::new()
         .route("/api/v1/config/jurisdictions", get(list_jurisdictions))
-        .route("/api/v1/config/jurisdictions/:code", get(get_jurisdiction_config))
+        .route(
+            "/api/v1/config/jurisdictions/:code",
+            get(get_jurisdiction_config),
+        )
 }
 
 async fn list_jurisdictions() -> Json<Value> {

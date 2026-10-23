@@ -32,4 +32,3 @@ mod tests {
         assert_eq!(events[0].entity_name, "Transaction");
     }
 }
-

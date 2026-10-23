@@ -1,6 +1,10 @@
+pub mod client_credentials;
 pub mod jwt;
 pub mod password;
 
+pub use client_credentials::{
+    generate_client_credentials, verify_client_secret, GeneratedCredentials,
+};
 pub use jwt::{Claims, JwtService};
 pub use password::{hash_password, verify_password, PasswordError};
 
@@ -44,4 +48,3 @@ mod tests {
         assert!(wrong_service.verify_token(&token).is_err());
     }
 }
-

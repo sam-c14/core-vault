@@ -87,7 +87,7 @@ async fn test_create_account_endpoint() {
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let json: Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["status"], "SUCCESS");
-    
+
     let account_num = json["account"]["account_number"].as_str().unwrap();
     assert_eq!(account_num.len(), 10);
     assert_eq!(&account_num[0..3], "058");

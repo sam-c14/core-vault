@@ -2,13 +2,20 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- 1. Tenants Table
+-- 1. Tenants Table (Serves as both Organization & M2M API Client)
 CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     code VARCHAR(16) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     country_code CHAR(2) NOT NULL DEFAULT 'NG',
     base_currency CHAR(3) NOT NULL DEFAULT 'NGN',
+    client_id VARCHAR(64) UNIQUE NOT NULL DEFAULT ('client_' || replace(gen_random_uuid()::text, '-', '')),
+    client_secret_hash VARCHAR(255) NOT NULL DEFAULT 'initial_placeholder_hash',
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACTIVE', 'BLACKLISTED', 'SUSPENDED')),
+    allowed_ips TEXT[] DEFAULT NULL,
+    scopes TEXT[] NOT NULL DEFAULT '{"transfers:read", "transfers:write", "accounts:read", "accounts:write"}',
+    blacklist_reason TEXT DEFAULT NULL,
+    violation_count INT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -87,12 +94,30 @@ CREATE TABLE IF NOT EXISTS accounts (
     lien_amount NUMERIC(20, 4) NOT NULL DEFAULT 0.0000 CHECK (lien_amount >= 0),
     overdraft_limit NUMERIC(20, 4) NOT NULL DEFAULT 0.0000 CHECK (overdraft_limit >= 0),
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('PENDING_OPENING', 'ACTIVE', 'DORMANT', 'POST_NO_DEBIT', 'FROZEN', 'CLOSED')),
+    pnd_source VARCHAR(32) DEFAULT NULL CHECK (pnd_source IN ('MANUAL_CLIENT_PND', 'SYSTEM_AUTOMATED_PND')),
+    pnd_reason TEXT DEFAULT NULL,
+    pnd_placed_at TIMESTAMPTZ DEFAULT NULL,
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_accounts_customer ON accounts(customer_id);
+
+-- 9. Tenant Custom PND Rules Table
+CREATE TABLE IF NOT EXISTS tenant_pnd_rules (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    rule_name VARCHAR(100) NOT NULL,
+    rule_type VARCHAR(50) NOT NULL CHECK (rule_type IN ('KYC_TIER_LIMIT', 'VELOCITY_BURST', 'DAILY_DEBIT_CAP', 'SUSPICIOUS_TRANSFER')),
+    max_single_amount NUMERIC(20, 4) DEFAULT NULL,
+    max_daily_cumulative NUMERIC(20, 4) DEFAULT NULL,
+    action VARCHAR(32) NOT NULL DEFAULT 'SYSTEM_AUTOMATED_PND',
+    is_enabled BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tenant_pnd_rules ON tenant_pnd_rules(tenant_id, is_enabled);
 
 -- 6. Transactions Header Table (Partitioned by created_at monthly)
 CREATE TABLE IF NOT EXISTS transactions (
@@ -156,3 +181,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_logs(entity_name, entity_id);
+
+-- Seed Initial Default Client/Tenant (Native Wallet App - Active & Whitelisted)
+INSERT INTO tenants (id, code, name, country_code, base_currency, client_id, client_secret_hash, status, is_active)
+VALUES (
+    'a0000000-0000-0000-0000-000000000001',
+    'WALLET_APP',
+    'CoreVault Native Wallet App',
+    'NG',
+    'NGN',
+    'client_wallet_app_default_01',
+    '$argon2id$v=19$m=65536,t=3,p=1$X1NFRURfU0FMVA$seed_hash_for_wallet_app_secret',
+    'ACTIVE',
+    true
+)
+ON CONFLICT (id) DO NOTHING;

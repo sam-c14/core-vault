@@ -12,7 +12,11 @@ fn security_reject_non_numeric_injection_in_nuban() {
 
     for attack in injections {
         let res = validate_nuban("058", attack);
-        assert!(res.is_err(), "Expected attack string '{}' to be rejected", attack);
+        assert!(
+            res.is_err(),
+            "Expected attack string '{}' to be rejected",
+            attack
+        );
     }
 }
 

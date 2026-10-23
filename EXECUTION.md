@@ -44,6 +44,14 @@ This document tracks execution milestones for CoreVault (Core Banking Applicatio
 
 - [ ] **#6 — Private Enterprise Repository & Payment Rails**
   - Scaffold private repository for closed-source enterprise modules.
-  - Implement `PaymentRailAdapter` for NIBSS NIP (ISO-8583 bridge).
+  - Implement `PaymentRailAdapter` for NIBSS NIP (ISO-8583 bridge) and agnostic Anchor rail.
   - Implement P2P Escrow Engine and Undo Transfer delay queue in Valkey.
   - Implement `ComplianceReporter` for CBN and NFIU automated XML generation.
+
+- [x] **#7 — M2M Client Authentication, Admin Whitelisting & Automated PND Engine**
+  - Tenant-as-Client domain unification: M2M API credentials (`client_id`, Argon2id `client_secret_hash`, `allowed_ips`, `scopes`) stored directly on the `tenants` table.
+  - M2M client authentication endpoint (`POST /api/v1/auth/token`) issuing scoped JWTs; strict 403 Forbidden enforcement on `PENDING`, `BLACKLISTED`, or `SUSPENDED` clients.
+  - Admin client management endpoints (`/api/v1/admin/tenants`): onboarding, whitelisting (`/whitelist`), blacklisting (`/blacklist`), and platform-level automatic violation blacklisting (`/simulate-violation`).
+  - Tenant custom Post-No-Debit (PND) rule engine (`/api/v1/tenants/pnd-rules`) supporting KYC tier limits, daily debit caps, and velocity bursts.
+  - Transfer route rule interception automatically applying `SYSTEM_AUTOMATED_PND` on rule breach (409 Conflict).
+  - Post-No-Debit lifting endpoint (`POST /api/v1/accounts/:nuban/pnd/lift`) allowing tenants to remove both client manual and system automated PNDs.

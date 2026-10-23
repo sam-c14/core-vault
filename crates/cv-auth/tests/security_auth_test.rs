@@ -16,7 +16,10 @@ fn security_reject_forged_claims_jwt() {
     assert_eq!(parts.len(), 3);
 
     // Tampering header or payload without re-signing must fail validation
-    let forged_token = format!("{}.{}.{}", parts[0], "eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiJ9", parts[2]);
+    let forged_token = format!(
+        "{}.{}.{}",
+        parts[0], "eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJTVVBFUl9BRE1JTiJ9", parts[2]
+    );
     assert!(service.verify_token(&forged_token).is_err());
 }
 
@@ -45,6 +48,6 @@ fn security_reject_empty_or_malformed_token() {
 #[test]
 fn security_argon2id_timing_resistance_on_wrong_password() {
     let hash = "$argon2id$v=19$m=19456,t=2,p=1$ZGF0YXNhbHQxMjM0NQ$h308c+Qj13JvYv8mP6T5Xq"; // Dummy Argon2 format
-    // Invalid hash parsing safely fails without panic
+                                                                                           // Invalid hash parsing safely fails without panic
     assert!(verify_password("Password", hash).is_err());
 }

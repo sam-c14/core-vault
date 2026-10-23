@@ -31,7 +31,11 @@ pub struct TransferReceipt {
 /// Extension point for payment rails (e.g. NIBSS NIP in enterprise, or mock in public core)
 #[async_trait]
 pub trait PaymentRailAdapter: Send + Sync {
-    async fn name_enquiry(&self, bank_code: &str, account_number: &str) -> CoreResult<AccountEnquiry>;
+    async fn name_enquiry(
+        &self,
+        bank_code: &str,
+        account_number: &str,
+    ) -> CoreResult<AccountEnquiry>;
     async fn dispatch_outward(&self, transfer: &OutwardTransfer) -> CoreResult<TransferReceipt>;
 }
 

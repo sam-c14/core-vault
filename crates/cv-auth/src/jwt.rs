@@ -17,6 +17,8 @@ pub struct Claims {
     pub sub: Uuid,
     pub tenant_id: Uuid,
     pub role: String,
+    #[serde(default)]
+    pub scopes: Vec<String>,
     pub exp: usize,
     pub iat: usize,
 }
@@ -46,6 +48,34 @@ impl JwtService {
             sub: user_id,
             tenant_id,
             role: role.to_string(),
+            scopes: vec!["*".to_string()],
+            exp,
+            iat,
+        };
+
+        encode(
+            &Header::default(),
+            &claims,
+            &EncodingKey::from_secret(&self.secret),
+        )
+        .map_err(|e| JwtError::CreationError(e.to_string()))
+    }
+
+    pub fn generate_m2m_token(
+        &self,
+        client_uuid: Uuid,
+        tenant_id: Uuid,
+        scopes: &[String],
+    ) -> Result<String, JwtError> {
+        let now = Utc::now();
+        let exp = (now + Duration::hours(1)).timestamp() as usize;
+        let iat = now.timestamp() as usize;
+
+        let claims = Claims {
+            sub: client_uuid,
+            tenant_id,
+            role: "API_CLIENT".to_string(),
+            scopes: scopes.to_vec(),
             exp,
             iat,
         };

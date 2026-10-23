@@ -1,7 +1,10 @@
 use crate::state::AccountRecord;
 use chrono::Utc;
 use cv_nuban_validator::generate_nuban;
-use cv_types::{AccountId, AccountStatus, AccountType, CoreError, CoreResult, Currency};
+use cv_types::{
+    AccountId, AccountStatus, AccountType, CoreError, CoreResult, Currency, PndRuleType, PndSource,
+    TenantPndRule,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -41,6 +44,8 @@ impl AccountManager {
             lien_amount: Decimal::ZERO,
             overdraft_limit: dto.overdraft_limit.unwrap_or(Decimal::ZERO),
             status: AccountStatus::Active,
+            pnd_source: None,
+            pnd_reason: None,
             version: 0,
             created_at: now,
             updated_at: now,
@@ -65,6 +70,78 @@ impl AccountManager {
         account.version += 1;
         account.updated_at = Utc::now();
         Ok(())
+    }
+
+    /// Places a manual Post-No-Debit initiated by a client operator or tenant staff.
+    pub fn place_manual_pnd(account: &mut AccountRecord, reason: &str) -> CoreResult<()> {
+        account.status = AccountStatus::PostNoDebit;
+        account.pnd_source = Some(PndSource::ManualClientPnd);
+        account.pnd_reason = Some(reason.to_string());
+        account.version += 1;
+        account.updated_at = Utc::now();
+        Ok(())
+    }
+
+    /// Automatically places a system Post-No-Debit when an account breaches custom tenant rules.
+    pub fn place_system_automated_pnd(
+        account: &mut AccountRecord,
+        rule_name: &str,
+        details: &str,
+    ) -> CoreResult<()> {
+        account.status = AccountStatus::PostNoDebit;
+        account.pnd_source = Some(PndSource::SystemAutomatedPnd);
+        account.pnd_reason = Some(format!("SYSTEM_PND [{rule_name}]: {details}"));
+        account.version += 1;
+        account.updated_at = Utc::now();
+        Ok(())
+    }
+
+    /// Removes an existing PND (either manual client or system automated) and restores ACTIVE status.
+    pub fn lift_pnd(account: &mut AccountRecord) -> CoreResult<()> {
+        if account.status != AccountStatus::PostNoDebit {
+            return Err(CoreError::AccountInactive(format!(
+                "Account {} is not under Post-No-Debit",
+                account.account_number
+            )));
+        }
+        account.status = AccountStatus::Active;
+        account.pnd_source = None;
+        account.pnd_reason = None;
+        account.version += 1;
+        account.updated_at = Utc::now();
+        Ok(())
+    }
+
+    /// Evaluates an outward transaction against active tenant custom PND rules.
+    /// Returns the triggered rule if a breach occurs.
+    pub fn evaluate_transaction_pnd_rules<'a>(
+        account: &AccountRecord,
+        transfer_amount: Decimal,
+        rules: &'a [TenantPndRule],
+    ) -> Option<&'a TenantPndRule> {
+        for rule in rules {
+            if !rule.is_enabled || rule.tenant_id != account.tenant_id {
+                continue;
+            }
+
+            match rule.rule_type {
+                PndRuleType::KycTierLimit | PndRuleType::DailyDebitCap => {
+                    if let Some(max_single) = rule.max_single_amount {
+                        if transfer_amount > max_single {
+                            return Some(rule);
+                        }
+                    }
+                }
+                PndRuleType::VelocityBurst | PndRuleType::SuspiciousTransfer => {
+                    if let Some(max_daily) = rule.max_daily_cumulative {
+                        if transfer_amount > max_daily {
+                            return Some(rule);
+                        }
+                    }
+                }
+            }
+        }
+        None
     }
 }
 
@@ -160,5 +237,79 @@ mod tests {
         assert!(!account.status.can_credit());
         assert!(!account.status.can_debit());
     }
-}
 
+    #[test]
+    fn test_manual_and_system_pnd_and_lifting() {
+        let tenant_id = Uuid::new_v4();
+        let mut account = AccountManager::build_new_account(CreateAccountDto {
+            tenant_id,
+            customer_id: None,
+            account_name: "PND Test Account".to_string(),
+            gl_code: "2110001".to_string(),
+            account_type: AccountType::Savings,
+            currency: Currency::NGN,
+            bank_code: "058".to_string(),
+            serial_number: 222222,
+            overdraft_limit: None,
+        })
+        .unwrap();
+
+        // 1. Manual PND placement
+        AccountManager::place_manual_pnd(&mut account, "Court order investigation").unwrap();
+        assert_eq!(account.status, AccountStatus::PostNoDebit);
+        assert_eq!(account.pnd_source, Some(PndSource::ManualClientPnd));
+        assert_eq!(
+            account.pnd_reason.as_deref(),
+            Some("Court order investigation")
+        );
+
+        // 2. Tenant lifts manual PND
+        AccountManager::lift_pnd(&mut account).unwrap();
+        assert_eq!(account.status, AccountStatus::Active);
+        assert_eq!(account.pnd_source, None);
+        assert_eq!(account.pnd_reason, None);
+
+        // 3. System Automated PND rule evaluation
+        let rules = vec![TenantPndRule {
+            id: Uuid::new_v4(),
+            tenant_id,
+            rule_name: "KYC_TIER_1_SINGLE_LIMIT".to_string(),
+            rule_type: PndRuleType::KycTierLimit,
+            max_single_amount: Some(dec!(50000.00)),
+            max_daily_cumulative: None,
+            is_enabled: true,
+        }];
+
+        // Normal amount does not trigger rule
+        let breach =
+            AccountManager::evaluate_transaction_pnd_rules(&account, dec!(30000.00), &rules);
+        assert!(breach.is_none());
+
+        // Amount exceeding limit triggers rule
+        let breach =
+            AccountManager::evaluate_transaction_pnd_rules(&account, dec!(75000.00), &rules);
+        assert!(breach.is_some());
+        let triggered_rule = breach.unwrap();
+        assert_eq!(triggered_rule.rule_name, "KYC_TIER_1_SINGLE_LIMIT");
+
+        // Automatically place system PND
+        AccountManager::place_system_automated_pnd(
+            &mut account,
+            &triggered_rule.rule_name,
+            "Transfer 75000.00 exceeds allowable tier single limit 50000.00",
+        )
+        .unwrap();
+
+        assert_eq!(account.status, AccountStatus::PostNoDebit);
+        assert_eq!(account.pnd_source, Some(PndSource::SystemAutomatedPnd));
+        assert!(account
+            .pnd_reason
+            .as_deref()
+            .unwrap()
+            .contains("KYC_TIER_1_SINGLE_LIMIT"));
+
+        // Tenant can lift system PND after review
+        AccountManager::lift_pnd(&mut account).unwrap();
+        assert_eq!(account.status, AccountStatus::Active);
+    }
+}

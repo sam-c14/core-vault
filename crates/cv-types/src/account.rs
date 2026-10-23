@@ -60,3 +60,32 @@ impl AccountStatus {
         )
     }
 }
+
+impl std::fmt::Display for AccountStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PendingOpening => write!(f, "PENDING_OPENING"),
+            Self::Active => write!(f, "ACTIVE"),
+            Self::Dormant => write!(f, "DORMANT"),
+            Self::PostNoDebit => write!(f, "POST_NO_DEBIT"),
+            Self::Frozen => write!(f, "FROZEN"),
+            Self::Closed => write!(f, "CLOSED"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PndSource {
+    ManualClientPnd,
+    SystemAutomatedPnd,
+}
+
+impl std::fmt::Display for PndSource {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ManualClientPnd => write!(f, "MANUAL_CLIENT_PND"),
+            Self::SystemAutomatedPnd => write!(f, "SYSTEM_AUTOMATED_PND"),
+        }
+    }
+}

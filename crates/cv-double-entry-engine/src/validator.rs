@@ -124,4 +124,3 @@ mod tests {
         assert!(validate_journal_batch(&legs).is_ok());
     }
 }
-
