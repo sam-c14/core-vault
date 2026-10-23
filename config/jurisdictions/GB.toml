@@ -1,0 +1,13 @@
+[jurisdiction]
+country_code = "GB"
+country_name = "United Kingdom"
+currency_iso = "GBP"
+currency_symbol = "£"
+minor_unit = 2
+
+[account_standard]
+format = "SORT_CODE_AND_ACCOUNT"
+length = 14
+bank_code_length = 6
+serial_length = 8
+check_digit_algorithm = "MOD_11"

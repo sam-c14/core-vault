@@ -1,0 +1,22 @@
+# CoreVault Caddy Reverse Proxy Configuration
+:80, :443 {
+    # Automatic TLS enabled by default when domain is supplied
+    
+    # Global compression
+    encode gzip zstd
+
+    # Security Headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Proxy to CoreVault Rust Monolith
+    reverse_proxy corevault:8080 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}

@@ -1,0 +1,25 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+*.lock
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+
+# IDE & Editor settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volume data
+data/
+pgdata/
+caddy_data/
+caddy_config/
+
+# OS metadata
+.DS_Store
+Thumbs.db

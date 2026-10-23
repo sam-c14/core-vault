@@ -1,0 +1,28 @@
+[jurisdiction]
+country_code = "NG"
+country_name = "Nigeria"
+currency_iso = "NGN"
+currency_symbol = "₦"
+minor_unit = 2
+
+[account_standard]
+format = "NUBAN"
+length = 10
+bank_code_length = 3
+serial_length = 6
+check_digit_algorithm = "CBN_MOD_10"
+
+[kyc_tiers.tier_1]
+max_single_deposit = 50000.00
+max_cumulative_balance = 300000.00
+required_documents = ["PHONE_NUMBER"]
+
+[kyc_tiers.tier_2]
+max_single_deposit = 200000.00
+max_cumulative_balance = 500000.00
+required_documents = ["BVN_OR_NIN", "BASIC_INFO"]
+
+[kyc_tiers.tier_3]
+max_single_deposit = 5000000.00
+max_cumulative_balance = 0.00 # Unlimited
+required_documents = ["BVN", "NIN", "GOVT_ID", "UTILITY_BILL"]

@@ -1,0 +1,88 @@
+[package]
+name = "corevault"
+version = "0.1.0"
+edition = "2021"
+authors = ["CoreVault Contributors"]
+description = "CoreVault — 100% Free & Open-Source Core Banking Engine in Rust"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/your-org/corevault"
+
+[workspace]
+members = [
+    "crates/cv-types",
+    "crates/cv-double-entry-engine",
+    "crates/cv-nuban-validator",
+    "crates/cv-account-manager",
+    "crates/cv-platform-config-parser",
+    "crates/cv-audit",
+    "crates/cv-auth",
+    "crates/cv-transaction-api",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Internal Workspace Crates
+cv-types = { path = "crates/cv-types" }
+cv-double-entry-engine = { path = "crates/cv-double-entry-engine" }
+cv-nuban-validator = { path = "crates/cv-nuban-validator" }
+cv-account-manager = { path = "crates/cv-account-manager" }
+cv-platform-config-parser = { path = "crates/cv-platform-config-parser" }
+cv-audit = { path = "crates/cv-audit" }
+cv-auth = { path = "crates/cv-auth" }
+cv-transaction-api = { path = "crates/cv-transaction-api" }
+
+# Web & Async Runtime
+axum = { version = "0.7", features = ["macros"] }
+tokio = { version = "1.37", features = ["full"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["trace", "cors"] }
+
+# Database & Storage
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "rust_decimal"] }
+redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
+
+# High-Precision Financial Math & Types
+rust_decimal = { version = "1.35", features = ["serde", "maths"] }
+rust_decimal_macros = "1.35"
+uuid = { version = "1.8", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Serialization & Config
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Security & Cryptography
+argon2 = "0.5"
+jsonwebtoken = "9.3"
+
+# Error Handling & Utilities
+thiserror = "1.0"
+anyhow = "1.0"
+async-trait = "0.1"
+
+# Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[dependencies]
+cv-types = { workspace = true }
+cv-double-entry-engine = { workspace = true }
+cv-nuban-validator = { workspace = true }
+cv-account-manager = { workspace = true }
+cv-platform-config-parser = { workspace = true }
+cv-audit = { workspace = true }
+cv-auth = { workspace = true }
+cv-transaction-api = { workspace = true }
+
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+sqlx = { workspace = true }
+redis = { workspace = true }
+anyhow = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
