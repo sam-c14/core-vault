@@ -1,0 +1,15 @@
+[package]
+name = "cv-audit"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Append-only audit trail logging for CoreVault"
+
+[dependencies]
+cv-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }

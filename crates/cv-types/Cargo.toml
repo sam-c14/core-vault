@@ -1,0 +1,15 @@
+[package]
+name = "cv-types"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Core domain types, financial math invariants, and extension traits for CoreVault"
+
+[dependencies]
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }

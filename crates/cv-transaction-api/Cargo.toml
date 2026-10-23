@@ -1,0 +1,34 @@
+[package]
+name = "cv-transaction-api"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Axum REST routes, idempotency locks, and transaction controllers for CoreVault"
+
+[dependencies]
+cv-types = { workspace = true }
+cv-double-entry-engine = { workspace = true }
+cv-account-manager = { workspace = true }
+cv-nuban-validator = { workspace = true }
+cv-audit = { workspace = true }
+cv-auth = { workspace = true }
+cv-platform-config-parser = { workspace = true }
+
+
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+redis = { workspace = true }
+
+[dev-dependencies]
+tower = { version = "0.4", features = ["util"] }
+http-body-util = "0.1"
+

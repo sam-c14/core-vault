@@ -1,0 +1,11 @@
+[package]
+name = "cv-platform-config-parser"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Declarative jurisdiction and compliance configuration parser for CoreVault"
+
+[dependencies]
+serde = { workspace = true }
+toml = { workspace = true }
+thiserror = { workspace = true }

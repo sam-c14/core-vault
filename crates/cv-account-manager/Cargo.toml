@@ -1,0 +1,17 @@
+[package]
+name = "cv-account-manager"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "Account lifecycle state machines, holds/liens, and balance verification for CoreVault"
+
+[dependencies]
+cv-types = { workspace = true }
+cv-double-entry-engine = { workspace = true }
+cv-nuban-validator = { workspace = true }
+rust_decimal = { workspace = true }
+rust_decimal_macros = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
