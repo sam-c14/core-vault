@@ -13,42 +13,87 @@
 
 ---
 
-## 🏛️ Open Core Architecture
+## 🏛️ Open Core Architecture Model
 
-CoreVault strictly divides the mathematical primitives of banking from commercial network adapters and monetization features:
+CoreVault strictly divides generic, verifiable banking primitives from commercial network adapters and monetization features:
 
-* **Public Core (This Repository):** Dual-licensed under **Apache 2.0 / MIT**. Contains the verifiable double-entry ledger engine, NUBAN mod-10 generator, account state machines, staff IAM, and REST transaction APIs.
-* **Enterprise Layer (Closed-Source):** Contains proprietary payment switch integrations (NIBSS NIP ISO-8583 bridge), P2P escrow engines, "Undo Transfer" delay queues, smart transaction tagging, and automated CBN/NFIU regulatory reporting.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                      COREVAULT OPEN CORE ECOSYSTEM                     │
+├────────────────────────────────────────────────────────────────────────┤
+│  PUBLIC OPEN-SOURCE CORE (This Repository) — Apache 2.0 / MIT          │
+│  - Mathematical Double-Entry Engine (rust_decimal, Zero Floats)        │
+│  - NUBAN Mod-10 Algorithm & Prefix Validation (CV-SEC-001 Hardened)    │
+│  - Account Lifecycle State Machine (ACTIVE, PND, FROZEN, CLOSED)       │
+│  - Financial Hold & Lien Management                                    │
+│  - Declarative Multi-Country Platformization TOML Engine               │
+│  - Staff IAM & Argon2id Password Hashing with JWT Tokens               │
+│  - Tamper-Evident Chronological Audit Logging Sink                     │
+│  - High-Throughput Axum HTTP REST Monolith Router                      │
+├────────────────────────────────────────────────────────────────────────┤
+│  ENTERPRISE LAYER (cba-enterprise) — Closed-Source / Proprietary       │
+│  - Agnostic Multi-Rail Payment Gateway (cv-payment-gateway)            │
+│  - Anchor BaaS Rail Adapter for SMEs (cv-rail-anchor / getanchor.co)   │
+│  - NIBSS NIP Direct Payment Switch Adapter (cv-rail-nip / ISO-8583)    │
+│  - 15-30s Cancellable Transfer Delay Queue (cv-undo-transfer)          │
+│  - Trustless P2P Escrow Engine with OTP Handshakes (cv-escrow-p2p)     │
+│  - AI Transaction Intelligence & Runway Analytics (cv-smart-tagging)   │
+│  - Automated CBN Daily Returns & NFIU goAML Reporting (cv-compliance)  │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+The extension boundary between the public core and private enterprise crates is governed by standard Rust traits defined in `cv-types`:
+* [`PaymentRailAdapter`](crates/cv-types/src/traits.rs): Generic outward and inward inter-bank payment rail protocol.
+* [`ComplianceReporter`](crates/cv-types/src/traits.rs): Transaction threshold screening and regulatory export interface.
 
 ---
 
 ## 📦 Public Workspace Crates
 
-| Crate | Purpose |
-| :--- | :--- |
-| [`crates/cv-types`](crates/cv-types) | Shared financial primitives (`rust_decimal` Money, Currencies, Account/Transaction IDs, and Extension Traits). |
-| [`crates/cv-double-entry-engine`](crates/cv-double-entry-engine) | Mathematical double-entry ledger logic ($\sum \text{Debits} == \sum \text{Credits}$). |
-| [`crates/cv-nuban-validator`](crates/cv-nuban-validator) | Nigerian Uniform Bank Account Number (NUBAN) CBN Mod-10 algorithm. |
-| [`crates/cv-account-manager`](crates/cv-account-manager) | Account lifecycle state machine (`PENDING`, `ACTIVE`, `PND`, `FROZEN`), holds, and liens. |
-| [`crates/cv-platform-config-parser`](crates/cv-platform-config-parser) | Declarative TOML parser for multi-country platformization (e.g. `NG.toml`, `GB.toml`). |
-| [`crates/cv-audit`](crates/cv-audit) | Append-only audit logging traits and sinks. |
-| [`crates/cv-auth`](crates/cv-auth) | Staff authentication, Argon2id password hashing, and JWT token management. |
-| [`crates/cv-transaction-api`](crates/cv-transaction-api) | Axum REST router, controllers, and Valkey-backed idempotency guards. |
+| Crate | Purpose | Core Invariant |
+| :--- | :--- | :--- |
+| [`crates/cv-types`](crates/cv-types) | Shared domain primitives (`Money`, `Currency`, `AccountId`, `TransactionId`) and enterprise extension traits. | Absolute zero `f32`/`f64` usage. |
+| [`crates/cv-double-entry-engine`](crates/cv-double-entry-engine) | Mathematical double-entry ledger logic. | $\sum \text{Debits} == \sum \text{Credits}$ per currency batch. |
+| [`crates/cv-nuban-validator`](crates/cv-nuban-validator) | Nigerian Uniform Bank Account Number (NUBAN) CBN Mod-10 algorithm & generator. | Bank-code prefix enforcement & check-digit verification. |
+| [`crates/cv-account-manager`](crates/cv-account-manager) | Account lifecycle state machine (`PENDING`, `ACTIVE`, `PND`, `FROZEN`), holds, and liens. | Strict debit restrictions on `PND` and `FROZEN` accounts. |
+| [`crates/cv-platform-config-parser`](crates/cv-platform-config-parser) | Declarative TOML parser for multi-country platformization (e.g. `NG.toml`, `GB.toml`). | Zero-recompilation country profile loading. |
+| [`crates/cv-audit`](crates/cv-audit) | Append-only audit logging traits and in-memory/persistent sinks. | Chronological tamper-evident audit trail. |
+| [`crates/cv-auth`](crates/cv-auth) | Staff authentication, Argon2id password hashing, and JWT token management. | Constant-time password verification & 256-bit entropy. |
+| [`crates/cv-transaction-api`](crates/cv-transaction-api) | Axum REST router, controllers, error mappers, and Valkey idempotency guards. | At-most-once execution via `Idempotency-Key`. |
 
 ---
 
-## 📖 Documentation Index
+## 🤖 Agent & Developer Skills (`.agent/skills/`)
 
-Complete specifications and guides are available in the [`docs/`](docs/) directory:
+CoreVault equips autonomous AI agents and human contributors with specialized skills in [`.agent/skills/`](.agent/skills/) to enforce code safety, maintain context, and ensure engineering quality:
 
-| Document | Purpose |
-| :--- | :--- |
-| [**Architecture Blueprint**](docs/ARCHITECTURE.md) | High-level system design, transaction lifecycles, ledger design, and extension trait interfaces. |
-| [**REST API Reference**](docs/API_REFERENCE.md) | Full documentation of all 21 REST endpoints with request/response payloads, headers, and `curl` examples. |
-| [**Developer Guide**](docs/DEVELOPMENT.md) | Local environment onboarding, Docker workflows, migrations, coding standards, and troubleshooting. |
-| [**Multi-Country Platformization**](docs/PLATFORMIZATION.md) | Adding and customizing country-specific rules, KYC tiers, and currency configurations via TOML. |
-| [**Security Audit Report**](docs/SECURITY_AUDIT.md) | Security vulnerability report, threat modeling, and verification of CV-SEC-001 patch. |
-| [**Postman & Newman Suite**](postman/README.md) | 21-endpoint automated integration test collection and headless Newman CLI runner. |
+| Skill | Invocation | Purpose & Guardrails |
+| :--- | :--- | :--- |
+| [**`commit-code`**](.agent/skills/commit-code/SKILL.md) | `/commit-code` | Consistent Conventional Commits pattern for closing out milestones referenced in [`EXECUTION.md`](EXECUTION.md). Enforces clean working trees, zero secrets, and pre-commit test gates. |
+| [**`banking-invariants`**](.agent/skills/banking-invariants/SKILL.md) | `/banking-invariants` | Audits code for non-negotiable financial invariants: zero floating point (`f32`/`f64` prohibition), double-entry balance equality, parameterized SQL, and account debit permissions. |
+| [**`verify-cba`**](.agent/skills/verify-cba/SKILL.md) | `/verify-cba` | Executes the complete verification pipeline: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace` (33 tests), and Newman CLI API test runs. |
+| [**`security-audit`**](.agent/skills/security-audit/SKILL.md) | `/security-audit` | Runs automated security regression tests: Argon2id timing resistance, JWT tamper resistance, NUBAN check-digit tampering prevention (CV-SEC-001), and secrets scanning. |
+| [**`platform-rules`**](.agent/skills/platform-rules/SKILL.md) | `/platform-rules` | Validates, tests, and parses multi-country localization TOML files in `config/jurisdictions/` for currency precision, account formats, KYC limits, and tax levies. |
+
+---
+
+## 📖 Comprehensive Documentation Index
+
+All architectural blueprints, PRDs, API specs, and development guides are maintained in [`docs/`](docs/) and the root directory:
+
+| Document | File Link | Focus & Highlights |
+| :--- | :--- | :--- |
+| **System Architecture** | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | High-level system design, transaction lifecycle sequence diagrams, database schema model, and extension traits. |
+| **REST API Reference** | [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) | Complete specification for all 21 REST endpoints with request/response schemas, HTTP status codes, headers, and `curl` examples. |
+| **Developer Onboarding** | [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) | Local environment setup, Docker workflows, PostgreSQL migrations, banking invariants, and troubleshooting guide. |
+| **Platformization Guide** | [`docs/PLATFORMIZATION.md`](docs/PLATFORMIZATION.md) | Multi-country localization tutorial explaining TOML schemas (`[jurisdiction]`, `[account_standard]`, `[kyc_tiers]`). |
+| **Security Audit Report** | [`docs/SECURITY_AUDIT.md`](docs/SECURITY_AUDIT.md) | Formal security audit detailing threat modeling, zero-float verification, and remediation of vulnerability `CV-SEC-001`. |
+| **Milestone Execution** | [`EXECUTION.md`](EXECUTION.md) | Completed and active development milestones tracking Conventional Commits and feature progress. |
+| **Postman & Newman Suite** | [`postman/README.md`](postman/README.md) | Automated 21-scenario integration test suite, environment variables, and headless Newman CLI runner instructions. |
+| **Modular Monolith PRD** | [`docs/PRD-monolith-v2.md`](docs/PRD-monolith-v2.md) | Definitive Modular Monolith PRD and OCI Always Free Tier deployment architecture. |
+| **Open Core Boundary Spec** | [`docs/PRD-proposed-diff-for-public-and-private-items.md`](docs/PRD-proposed-diff-for-public-and-private-items.md) | Detailed separation boundary between public core crates and private enterprise crates. |
+| **Architecture Review** | [`docs/PRD-monolith-review.md`](docs/PRD-monolith-review.md) | Review of monolith architectural patterns, trade-offs, and microservices transition triggers. |
+| **Original System PRD** | [`docs/PRD.md`](docs/PRD.md) | Original CoreVault core banking platform functional and regulatory specification. |
 
 ---
 
@@ -57,32 +102,34 @@ Complete specifications and guides are available in the [`docs/`](docs/) directo
 ### Prerequisites
 * [Rust 1.81+](https://www.rust-lang.org/tools/install)
 * [Docker & Docker Compose](https://docs.docker.com/get-docker/)
-* [Newman CLI](https://www.npmjs.com/package/newman) (for automated API testing)
+* [PostgreSQL Client (`psql`)](https://www.postgresql.org)
+* [Newman CLI](https://www.npmjs.com/package/newman) (optional, for automated API testing)
 
-### 1. Spin up PostgreSQL & Valkey
+### 1. Spin up PostgreSQL 16 & Valkey 7.2
 ```bash
 docker compose up -d postgres valkey
 ```
 
-### 2. Apply Database Schema Migrations
+### 2. Apply Database Schema & Seed Data
 ```bash
 psql "postgres://cv_user:cv_password@localhost:5432/corevault_db" \
   -f migrations/20261022000000_init_corevault_schema.sql
 ```
 
-### 3. Run the CoreVault Server
+### 3. Run the Monolith HTTP Server
 ```bash
 export DATABASE_URL="postgres://cv_user:cv_password@localhost:5432/corevault_db"
 export VALKEY_URL="redis://localhost:6379"
 export PORT=8080
+export JWT_SECRET="super_secret_jwt_key_change_in_production_123456"
 
 cargo run --bin corevault
 ```
 
-### 4. Verify Health
+### 4. Verify System Health
 ```bash
-curl http://localhost:8080/health/live
-# {"checks":{"database":"UP","valkey":"UP"},"service":"corevault-monolith","status":"READY"}
+curl -s http://127.0.0.1:8080/health/live | jq .
+curl -s http://127.0.0.1:8080/health/ready | jq .
 ```
 
 ---
@@ -93,7 +140,7 @@ curl http://localhost:8080/health/live
 ```bash
 cargo test --workspace
 ```
-* **Result:** 33 unit and integration tests passing with 0 errors.
+* **Result:** 33 unit, integration, and security tests passing with 0 errors.
 
 ### Strict Clippy Verification
 ```bash
@@ -101,7 +148,8 @@ cargo clippy --workspace --tests -- -D warnings
 ```
 * **Result:** Zero warnings or linter errors.
 
-### Execute Newman API Collection
+### Execute Headless Newman API Suite
+With the server running on `http://127.0.0.1:8080`:
 ```bash
 newman run postman/corevault_collection.json \
   -e postman/corevault_environment.json \
@@ -111,9 +159,10 @@ newman run postman/corevault_collection.json \
 
 ---
 
-## 🛡️ Core Banking Invariants
+## 🛡️ Non-Negotiable Core Banking Invariants
 
 * **Absolute Zero Floating Point:** Zero occurrences of `f32` or `f64` in core accounting and ledger calculation. All monetary calculations use `rust_decimal::Decimal`.
 * **Zero Raw SQL String Concatenation:** All queries use compile-time parameterized statements (`$1`, `$2`), eliminating SQL injection risks.
 * **Conservation of Value:** Every financial movement is double-entry verified: $\sum \text{Debits} == \sum \text{Credits}$ per currency batch.
 * **Strict State Enforcement:** Accounts restricted with `POST_NO_DEBIT` or `FROZEN` automatically reject debit transactions.
+* **Idempotent Mutations:** All state-altering API requests require a unique `Idempotency-Key` (UUIDv4) header cached in Valkey.
