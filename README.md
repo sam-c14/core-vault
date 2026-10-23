@@ -90,10 +90,7 @@ All architectural blueprints, PRDs, API specs, and development guides are mainta
 | **Security Audit Report** | [`docs/SECURITY_AUDIT.md`](docs/SECURITY_AUDIT.md) | Formal security audit detailing threat modeling, zero-float verification, and remediation of vulnerability `CV-SEC-001`. |
 | **Milestone Execution** | [`EXECUTION.md`](EXECUTION.md) | Completed and active development milestones tracking Conventional Commits and feature progress. |
 | **Postman & Newman Suite** | [`postman/README.md`](postman/README.md) | Automated 21-scenario integration test suite, environment variables, and headless Newman CLI runner instructions. |
-| **Modular Monolith PRD** | [`docs/PRD-monolith-v2.md`](docs/PRD-monolith-v2.md) | Definitive Modular Monolith PRD and OCI Always Free Tier deployment architecture. |
-| **Open Core Boundary Spec** | [`docs/PRD-proposed-diff-for-public-and-private-items.md`](docs/PRD-proposed-diff-for-public-and-private-items.md) | Detailed separation boundary between public core crates and private enterprise crates. |
-| **Architecture Review** | [`docs/PRD-monolith-review.md`](docs/PRD-monolith-review.md) | Review of monolith architectural patterns, trade-offs, and microservices transition triggers. |
-| **Original System PRD** | [`docs/PRD.md`](docs/PRD.md) | Original CoreVault core banking platform functional and regulatory specification. |
+| **Enterprise Commercial Specs** | *Companion Repo* | Full commercial PRDs, monetization roadmaps, and fee specifications are maintained in `cba-enterprise/docs/`. |
 
 ---
 
