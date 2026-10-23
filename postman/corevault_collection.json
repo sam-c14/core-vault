@@ -1,0 +1,914 @@
+{
+  "info": {
+    "_postman_id": "cba00001-2026-4000-8000-000000000001",
+    "name": "CoreVault Core Banking API (Complete Edition)",
+    "description": "Comprehensive Postman Collection for CoreVault V1 — 100% Free & Open-Source Core Banking Engine in Rust.\n\nOrganized by domain crates:\n1. Health & Infrastructure Probes\n2. Staff Authentication & IAM (`cv-auth`)\n3. Account Management & NUBAN (`cv-account-manager` & `cv-nuban-validator`)\n4. Account Controls & Liens (`cv-account-manager`)\n5. Double-Entry Transfers (`cv-double-entry-engine`)\n6. Platform & Jurisdiction Configuration (`cv-platform-config-parser`)\n7. Audit Trail (`cv-audit`)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health & Infrastructure Probes",
+      "description": "Health check endpoints designed for container orchestrators (Kubernetes/Docker), load balancers (Caddy/NGINX), and uptime monitoring systems.",
+      "item": [
+        {
+          "name": "Check Liveness (/health/live)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Service is UP\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"UP\");",
+                  "    pm.expect(jsonData.service).to.eql(\"corevault-monolith\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "live"]
+            },
+            "description": "Lightweight probe to verify that the HTTP process is responsive."
+          },
+          "response": []
+        },
+        {
+          "name": "Check Readiness (/health/ready)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"State is READY with DB and Valkey UP\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"READY\");",
+                  "    pm.expect(jsonData.checks.database).to.eql(\"UP\");",
+                  "    pm.expect(jsonData.checks.valkey).to.eql(\"UP\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["health", "ready"]
+            },
+            "description": "Verifies that downstream persistence layers (PostgreSQL and Valkey) are connected."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Staff Authentication & IAM (cv-auth)",
+      "description": "Powered by the `cv-auth` crate. Implements Argon2id password verification, cryptographic Ed25519/HMAC JWT token issuance, and caller session authorization.",
+      "item": [
+        {
+          "name": "Staff Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Token received and saved to environment\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.token).to.not.be.empty;",
+                  "    pm.expect(jsonData.token_type).to.eql(\"Bearer\");",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"AdminSecurePass#2026\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticates bank staff with Argon2id and returns a signed 15-minute access token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Authenticated User Identity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Claims contain valid role\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.claims.role).to.eql(\"OPERATIONS_OFFICER\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Validates the Bearer JWT token and returns caller identity and permissions."
+          },
+          "response": []
+        },
+        {
+          "name": "Login Rejection - Invalid Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401 Unauthorized\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "pm.test(\"Invalid password rejected\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"UNAUTHORIZED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"WrongGuessPassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Verifies that invalid password attempts are rejected."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Account Management & NUBAN (cv-account-manager & cv-nuban-validator)",
+      "description": "Powered by `cv-account-manager` and `cv-nuban-validator`. Implements the Central Bank of Nigeria (CBN) Mod-10 algorithm for generating 10-digit NUBAN account numbers, account lifecycle state machines, and balance inquiries.",
+      "item": [
+        {
+          "name": "Open Savings Account",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var randomSerial = Math.floor(100000 + Math.random() * 900000);",
+                  "pm.environment.set(\"currentSerial\", randomSerial);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Account created with valid NUBAN\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.account.account_number).to.have.lengthOf(10);",
+                  "    pm.expect(jsonData.account.status).to.eql(\"ACTIVE\");",
+                  "    pm.environment.set(\"accountNumber\", jsonData.account.account_number);",
+                  "    pm.environment.set(\"sourceAccountId\", jsonData.account.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Emeka Okafor Savings\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial}},\n  \"overdraft_limit\": \"0.00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            },
+            "description": "Creates a retail savings account and generates a verified 10-digit NUBAN."
+          },
+          "response": []
+        },
+        {
+          "name": "Open Current Account with Overdraft",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var randomSerial = Math.floor(100000 + Math.random() * 900000);",
+                  "pm.environment.set(\"currentSerial2\", randomSerial);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Overdraft limit is assigned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.account.overdraft_limit).to.eql(\"50000.00\");",
+                  "    pm.environment.set(\"destinationAccountId\", jsonData.account.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Lagos Tech Ventures Current\",\n  \"gl_code\": \"2110002\",\n  \"account_type\": \"CURRENT\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial2}},\n  \"overdraft_limit\": \"50000.00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            },
+            "description": "Creates a corporate current account with approved overdraft headroom."
+          },
+          "response": []
+        },
+        {
+          "name": "Account Opening Rejection - Invalid Bank Code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Invalid bank code rejected\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"ERROR\");",
+                  "    pm.expect(jsonData.message).to.include(\"Invalid bank code\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Invalid Code Test\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"5\",\n  \"serial_number\": 123456,\n  \"overdraft_limit\": \"0.00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            },
+            "description": "Validates that NUBAN generator rejects bank codes not conforming to 3 digits."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Account by NUBAN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account inquiry returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.account_number).to.eql(pm.environment.get(\"accountNumber\"));",
+                  "    pm.expect(jsonData.status).to.eql(\"ACTIVE\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}"]
+            },
+            "description": "Retrieves the account balance and status by 10-digit NUBAN."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Account Controls & Liens (cv-account-manager)",
+      "description": "Powered by `cv-account-manager`. Enforces compliance restrictions (`POST_NO_DEBIT`, `FROZEN`) and financial liens/holds under CBN regulations.",
+      "item": [
+        {
+          "name": "Place Post-No-Debit (PND)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"PND placed: debits blocked, credits permitted\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.current_status).to.eql(\"POST_NO_DEBIT\");",
+                  "    pm.expect(jsonData.can_debit).to.eql(false);",
+                  "    pm.expect(jsonData.can_credit).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Suspicious KYC documentation flagged for review\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}", "pnd"]
+            },
+            "description": "Places a Post-No-Debit (PND) hold on the account. Debits are forbidden; credits remain allowed."
+          },
+          "response": []
+        },
+        {
+          "name": "Freeze Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account frozen: all activity blocked\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.current_status).to.eql(\"FROZEN\");",
+                  "    pm.expect(jsonData.can_debit).to.eql(false);",
+                  "    pm.expect(jsonData.can_credit).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Court order warrant compliance freeze\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/freeze",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}", "freeze"]
+            },
+            "description": "Completely freezes account. Both credits and debits are strictly blocked."
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Account (Restore)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account restored to ACTIVE\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.current_status).to.eql(\"ACTIVE\");",
+                  "    pm.expect(jsonData.can_debit).to.eql(true);",
+                  "    pm.expect(jsonData.can_credit).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"KYC verification verified and approved by Compliance\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/activate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}", "activate"]
+            },
+            "description": "Lifts restrictions and restores the account to ACTIVE."
+          },
+          "response": []
+        },
+        {
+          "name": "Place Financial Lien (Hold)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Lien placed successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.action).to.eql(\"LIEN_PLACED\");",
+                  "    pm.expect(jsonData.placed_lien_amount).to.eql(\"15000.00\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pending debit card pre-authorization\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}", "liens"]
+            },
+            "description": "Places a financial hold on the account, reducing available balance without moving funds."
+          },
+          "response": []
+        },
+        {
+          "name": "Release Financial Lien",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Lien released successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.action).to.eql(\"LIEN_RELEASED\");",
+                  "    pm.expect(jsonData.released_lien_amount).to.eql(\"15000.00\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pre-authorization expired or settled\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens/release",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountNumber}}", "liens", "release"]
+            },
+            "description": "Releases an active lien, restoring the available balance."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Double-Entry Transfers (cv-double-entry-engine)",
+      "description": "Powered by `cv-double-entry-engine`. Enforces the fundamental invariant of double-entry bookkeeping: every transaction consists of at least two posting legs where Total Debits strictly equals Total Credits in the same currency.",
+      "item": [
+        {
+          "name": "Post Balanced Intra-Bank Transfer",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {",
+                  "    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);",
+                  "    return v.toString(16);",
+                  "});",
+                  "pm.request.headers.add({ key: 'Idempotency-Key', value: uuid });"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Transaction committed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"COMMITTED\");",
+                  "    pm.expect(jsonData.amount).to.eql(\"25000.00\");",
+                  "    pm.expect(jsonData.currency).to.eql(\"NGN\");",
+                  "    pm.expect(jsonData.transaction_id).to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"25000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Payment for electrical installation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/intra",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transfers", "intra"]
+            },
+            "description": "Submits a transfer with automatic Debits == Credits verification."
+          },
+          "response": []
+        },
+        {
+          "name": "Transfer Rejection - Negative Amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Negative amount validation fails\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"VALIDATION_FAILED\");",
+                  "    pm.expect(jsonData.error).to.include(\"strictly positive\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"-500.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal negative amount transfer attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/intra",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transfers", "intra"]
+            },
+            "description": "Demonstrates security & invariant validation rejecting non-positive transfer amounts."
+          },
+          "response": []
+        },
+        {
+          "name": "Transfer Rejection - Zero Amount",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test(\"Zero amount validation fails\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"VALIDATION_FAILED\");",
+                  "    pm.expect(jsonData.error).to.include(\"strictly positive\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal zero amount transfer attempt\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/intra",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "transfers", "intra"]
+            },
+            "description": "Validates that double-entry ledger rejects transactions with 0.00 amount."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Platform & Jurisdiction Configuration (cv-platform-config-parser)",
+      "description": "Powered by `cv-platform-config-parser`. Exposes declarative multi-country rules parsed from local TOML configurations (Nigeria NUBAN/CBN rules, UK Sort Code/FCA rules) enabling country platformization.",
+      "item": [
+        {
+          "name": "List Supported Jurisdictions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Returns list of jurisdictions\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.supported_jurisdictions.length).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/config/jurisdictions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "config", "jurisdictions"]
+            },
+            "description": "Lists the countries currently configured in the platform."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Nigeria Banking & KYC Rules (NG.toml)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Nigeria configuration parsed correctly\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.configuration.jurisdiction.country_code).to.eql(\"NG\");",
+                  "    pm.expect(jsonData.configuration.account_standard.format).to.eql(\"NUBAN\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/config/jurisdictions/NG",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "config", "jurisdictions", "NG"]
+            },
+            "description": "Parses and returns the declarative TOML rules for Nigeria (NUBAN check digit, 3-tier KYC balance limits)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get United Kingdom Banking Rules (GB.toml)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"UK configuration parsed correctly\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.configuration.jurisdiction.country_code).to.eql(\"GB\");",
+                  "    pm.expect(jsonData.configuration.account_standard.format).to.eql(\"SORT_CODE_AND_ACCOUNT\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/config/jurisdictions/GB",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "config", "jurisdictions", "GB"]
+            },
+            "description": "Parses and returns the declarative TOML rules for the United Kingdom."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. Audit Trail (cv-audit)",
+      "description": "Powered by `cv-audit`. Exposes the append-only audit trail capturing administrative modifications, status changes, and critical banking operations for compliance and regulators.",
+      "item": [
+        {
+          "name": "Retrieve Audit Event Logs",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Audit logs array returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.audit_logs).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/audit/logs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "audit", "logs"]
+            },
+            "description": "Queries the immutable audit sink for historical regulatory events."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": ["// Global Collection Pre-request Script"],
+        "type": "text/javascript"
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "exec": ["// Global Collection Test Script"],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080",
+      "type": "string"
+    }
+  ]
+}

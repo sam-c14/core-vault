@@ -1,0 +1,57 @@
+{
+  "id": "e81d4a2b-3657-4f67-8e34-522f1837e8c1",
+  "name": "CoreVault Local Dev",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "tenantId",
+      "value": "a0000000-0000-0000-0000-000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "customerId",
+      "value": "c0000000-0000-0000-0000-000000000001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "bankCode",
+      "value": "058",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "accountNumber",
+      "value": "0581234560",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "sourceAccountId",
+      "value": "09a69771-95d4-4670-af40-9eb8a7ef231a",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "destinationAccountId",
+      "value": "11111111-2222-3333-4444-555555555555",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-10-22T23:51:00.000Z",
+  "_postman_exported_using": "Postman/10.0.0"
+}
