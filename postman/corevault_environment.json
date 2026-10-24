@@ -49,6 +49,42 @@
       "value": "",
       "type": "secret",
       "enabled": true
+    },
+    {
+      "key": "clientId",
+      "value": "client_wallet_app_seed001",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "clientSecret",
+      "value": "sec_live_wallet_app_seed_key_2026",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "m2mToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "newTenantId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "newClientId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "newClientSecret",
+      "value": "",
+      "type": "secret",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment",

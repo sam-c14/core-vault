@@ -9,13 +9,15 @@ All endpoints adhere to standard HTTP semantics, return `application/json` respo
 ## 📑 Table of Contents
 1. [Overview & Standards](#overview--standards)
 2. [Section 1: Health & Infrastructure Probes](#section-1-health--infrastructure-probes)
-3. [Section 2: Staff Authentication & IAM](#section-2-staff-authentication--iam)
+3. [Section 2: Authentication & Client IAM](#section-2-authentication--client-iam)
 4. [Section 3: Account Management & NUBAN](#section-3-account-management--nuban)
 5. [Section 4: Account Controls & Liens](#section-4-account-controls--liens)
 6. [Section 5: Double-Entry Transfers](#section-5-double-entry-transfers)
 7. [Section 6: Multi-Country Platformization](#section-6-multi-country-platformization)
 8. [Section 7: Audit Trail & Compliance](#section-7-audit-trail--compliance)
-9. [HTTP Error Codes & Responses](#http-error-codes--responses)
+9. [Section 8: Admin Tenant & Client Governance](#section-8-admin-tenant--client-governance)
+10. [Section 9: Tenant Custom Post-No-Debit (PND) Rules](#section-9-tenant-custom-post-no-debit-pnd-rules)
+11. [HTTP Error Codes & Responses](#http-error-codes--responses)
 
 ---
 
@@ -89,7 +91,7 @@ curl -X GET http://127.0.0.1:8080/health/ready
 
 ---
 
-## Section 2: Staff Authentication & IAM
+## Section 2: Authentication & Client IAM
 
 Staff authentication is governed by the `cv-auth` crate using Argon2id password hashing and signed JSON Web Tokens (JWT).
 
@@ -148,7 +150,87 @@ curl -X POST http://127.0.0.1:8080/api/v1/auth/login \
 
 ---
 
-### 2.2 Get Authenticated User Identity
+---
+
+### 2.2 Issue M2M Client Token (client_credentials)
+Authenticates an external tenant machine-to-machine service using `client_id` and raw `client_secret`, returning a scoped Bearer JWT token valid for 1 hour.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/auth/token`
+- **Authentication:** None (Client Credentials)
+
+#### Request Headers
+```http
+Content-Type: application/json
+```
+
+#### Request Body
+```json
+{
+  "client_id": "client_wallet_app_seed001",
+  "client_secret": "sec_live_wallet_app_seed_key_2026"
+}
+```
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in_seconds": 3600,
+  "scopes": [
+    "transfers:write",
+    "accounts:read",
+    "accounts:write",
+    "admin:read"
+  ],
+  "status": "SUCCESS",
+  "tenant_id": "a0000000-0000-0000-0000-000000000001",
+  "token_type": "Bearer"
+}
+```
+
+#### Response (Failure - 401 Unauthorized: Invalid Secret)
+- **Status:** `401 Unauthorized`
+```json
+{
+  "message": "Invalid client_id or client_secret",
+  "status": "UNAUTHORIZED"
+}
+```
+
+#### Response (Failure - 403 Forbidden: Pending Approval)
+- **Status:** `403 Forbidden`
+```json
+{
+  "error": "Client/Tenant onboarding is pending admin approval and whitelisting",
+  "status": "FORBIDDEN"
+}
+```
+
+#### Response (Failure - 403 Forbidden: Blacklisted Client)
+- **Status:** `403 Forbidden`
+```json
+{
+  "error": "Client/Tenant is blacklisted: Sanctions match on international watch list",
+  "status": "FORBIDDEN",
+  "violation_count": 1
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": "client_wallet_app_seed001",
+    "client_secret": "sec_live_wallet_app_seed_key_2026"
+  }'
+```
+
+---
+
+### 2.3 Get Authenticated User Identity
 Validates the current session's JWT token and returns claims.
 
 - **Method:** `GET`
@@ -500,6 +582,61 @@ curl -X POST http://127.0.0.1:8080/api/v1/accounts/0440001237/liens/release \
 
 ---
 
+### 4.6 Lift Post-No-Debit (PND)
+Removes an active Post-No-Debit restriction placed on an account (either `MANUAL_CLIENT_PND` or `SYSTEM_AUTOMATED_PND`) and restores operational `ACTIVE` debiting capabilities.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/accounts/:nuban/pnd/lift`
+- **Authentication:** `Bearer <token>`
+
+#### Request Headers
+```http
+Content-Type: application/json
+Authorization: Bearer <token>
+```
+
+#### Request Body (Optional)
+```json
+{
+  "reason": "Customer Tier 2 KYC identity documentation validated and verified"
+}
+```
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "account_number": "0440001237",
+  "can_credit": true,
+  "can_debit": true,
+  "current_status": "ACTIVE",
+  "lift_notes": "Customer Tier 2 KYC identity documentation validated and verified",
+  "pnd_reason": null,
+  "pnd_source": null,
+  "previous_status": "POST_NO_DEBIT",
+  "status": "SUCCESS"
+}
+```
+
+#### Response (Failure - 400 Bad Request: Account Not Restrained)
+- **Status:** `400 Bad Request`
+```json
+{
+  "message": "Account 0440001237 is not under Post-No-Debit",
+  "status": "ERROR"
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/accounts/0440001237/pnd/lift \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{"reason": "Customer Tier 2 KYC identity documentation validated and verified"}'
+```
+
+---
+
 ## Section 5: Double-Entry Transfers
 
 Transfers are executed via `cv-double-entry-engine` and enforce strict conservation of value across all posting legs.
@@ -559,6 +696,62 @@ curl -X POST http://127.0.0.1:8080/api/v1/transfers/intra \
     "amount": "15000.00",
     "currency": "NGN",
     "narration": "Invoice #4028 payment"
+  }'
+```
+
+---
+
+### 5.2 Tenant Compliance PND Rule Enforcement
+Demonstrates transaction rejection and automated account restriction when an outgoing transfer breaches custom tenant compliance rules (e.g. single transfer limits).
+
+- **Method:** `POST`
+- **Path:** `/api/v1/transfers/intra`
+- **Authentication:** `Bearer <token>`
+
+#### Request Body (Breaching Configured Tier Cap)
+```json
+{
+  "source_account_id": "8f8b1c1e-9271-4775-9c87-bb78c4371900",
+  "destination_account_id": "b1a77413-5a02-45df-9d3e-908091ecf1aa",
+  "amount": "85000.00",
+  "currency": "NGN",
+  "narration": "Large transfer exceeding tenant tier limit"
+}
+```
+
+#### Response (Rule Breach - Automated System PND Enforced)
+- **Status:** `409 Conflict`
+```json
+{
+  "error": "Transaction breached tenant compliance rule 'KYC_TIER_1_SINGLE_TRANSFER_CAP'. Account has been automatically placed under SYSTEM_AUTOMATED_PND",
+  "pnd_source": "SYSTEM_AUTOMATED_PND",
+  "status": "PND_ENFORCED",
+  "triggered_rule": "KYC_TIER_1_SINGLE_TRANSFER_CAP"
+}
+```
+
+#### Response (Subsequent Debit Attempt Rejection)
+- **Status:** `403 Forbidden`
+```json
+{
+  "error": "Account is under restriction (POST_NO_DEBIT) and cannot be debited",
+  "pnd_reason": "SYSTEM_PND [KYC_TIER_1_SINGLE_TRANSFER_CAP]: Transfer amount 85000.00 NGN breached tenant rule limit",
+  "pnd_source": "SYSTEM_AUTOMATED_PND",
+  "status": "ACCOUNT_RESTRICTED"
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/transfers/intra \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "source_account_id": "8f8b1c1e-9271-4775-9c87-bb78c4371900",
+    "destination_account_id": "b1a77413-5a02-45df-9d3e-908091ecf1aa",
+    "amount": "85000.00",
+    "currency": "NGN",
+    "narration": "Attempted tier limit breach"
   }'
 ```
 
@@ -706,6 +899,378 @@ Fetches append-only chronological audit records.
 #### cURL Example
 ```bash
 curl -X GET http://127.0.0.1:8080/api/v1/audit/logs
+```
+
+---
+
+---
+
+## Section 8: Admin Tenant & Client Governance
+
+Endpoints for Super Administrators to onboard external client organizations, manage client credentials, whitelist/activate partners, and enforce platform-level compliance blacklisting.
+
+### 8.1 Onboard New Client / Tenant
+Registers an external client organization. Credentials are generated with Argon2id hashing and initialized to `PENDING` status until reviewed. The raw `client_secret` is displayed only once.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/admin/tenants`
+- **Authentication:** Super Admin
+
+#### Request Headers
+```http
+Content-Type: application/json
+```
+
+#### Request Body
+```json
+{
+  "tenant_code": "FINTECH_NEO",
+  "tenant_name": "Fintech Neo Global Ltd",
+  "base_currency": "NGN",
+  "allowed_ips": ["127.0.0.1", "::1"],
+  "scopes": ["transfers:write", "accounts:read", "accounts:write"]
+}
+```
+
+#### Response (Success - 201 Created)
+- **Status:** `201 Created`
+```json
+{
+  "message": "Tenant onboarded with PENDING status. Admin whitelisting required before API activation.",
+  "status": "SUCCESS",
+  "tenant": {
+    "base_currency": "NGN",
+    "client_id": "client_fintech_neo_a1b2c3d4e5f6",
+    "client_secret": "sec_live_9f8e7d6c5b4a3a2b1c0d",
+    "id": "e9b21f42-45e3-4c91-9e77-123456789abc",
+    "scopes": ["transfers:write", "accounts:read", "accounts:write"],
+    "status": "PENDING",
+    "tenant_code": "FINTECH_NEO",
+    "tenant_name": "Fintech Neo Global Ltd"
+  }
+}
+```
+
+#### Response (Failure - 400 Bad Request)
+- **Status:** `400 Bad Request`
+```json
+{
+  "message": "tenant_code and tenant_name are required",
+  "status": "ERROR"
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/tenants \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_code": "FINTECH_NEO",
+    "tenant_name": "Fintech Neo Global Ltd",
+    "base_currency": "NGN",
+    "scopes": ["transfers:write", "accounts:read", "accounts:write"]
+  }'
+```
+
+---
+
+### 8.2 List All Clients / Tenants
+Returns a sanitized list of all registered clients and tenant organizations, omitting raw secrets and credential hashes.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/admin/tenants`
+- **Authentication:** Super Admin
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "tenants": [
+    {
+      "allowed_ips": ["127.0.0.1", "::1"],
+      "base_currency": "NGN",
+      "blacklist_reason": null,
+      "client_id": "client_wallet_app_seed001",
+      "created_at": "2026-10-24T00:00:00Z",
+      "id": "a0000000-0000-0000-0000-000000000001",
+      "scopes": ["transfers:write", "accounts:read", "accounts:write", "admin:read"],
+      "status": "ACTIVE",
+      "tenant_code": "WALLET_APP",
+      "tenant_name": "CoreVault Native Wallet App",
+      "updated_at": "2026-10-24T00:00:00Z",
+      "violation_count": 0
+    }
+  ]
+}
+```
+
+#### cURL Example
+```bash
+curl -X GET http://127.0.0.1:8080/api/v1/admin/tenants
+```
+
+---
+
+### 8.3 Get Client / Tenant by ID
+Retrieves tenant metadata by UUID.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/admin/tenants/:id`
+- **Authentication:** Super Admin
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "tenant": {
+    "allowed_ips": ["127.0.0.1", "::1"],
+    "base_currency": "NGN",
+    "blacklist_reason": null,
+    "client_id": "client_wallet_app_seed001",
+    "created_at": "2026-10-24T00:00:00Z",
+    "id": "a0000000-0000-0000-0000-000000000001",
+    "scopes": ["transfers:write", "accounts:read", "accounts:write", "admin:read"],
+    "status": "ACTIVE",
+    "tenant_code": "WALLET_APP",
+    "tenant_name": "CoreVault Native Wallet App",
+    "updated_at": "2026-10-24T00:00:00Z",
+    "violation_count": 0
+  }
+}
+```
+
+#### Response (Failure - 404 Not Found)
+- **Status:** `404 Not Found`
+```json
+{
+  "message": "Tenant not found",
+  "status": "NOT_FOUND"
+}
+```
+
+#### cURL Example
+```bash
+curl -X GET http://127.0.0.1:8080/api/v1/admin/tenants/a0000000-0000-0000-0000-000000000001
+```
+
+---
+
+### 8.4 Super Admin Whitelist / Activate Client
+Approves a pending or previously suspended client organization, promoting their status to `ACTIVE` and enabling M2M API token generation.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/admin/tenants/:id/whitelist`
+- **Authentication:** Super Admin
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "message": "Tenant successfully whitelisted and activated",
+  "status": "SUCCESS",
+  "tenant": {
+    "allowed_ips": ["127.0.0.1", "::1"],
+    "base_currency": "NGN",
+    "blacklist_reason": null,
+    "client_id": "client_fintech_neo_a1b2c3d4e5f6",
+    "id": "e9b21f42-45e3-4c91-9e77-123456789abc",
+    "scopes": ["transfers:write", "accounts:read", "accounts:write"],
+    "status": "ACTIVE",
+    "tenant_code": "FINTECH_NEO",
+    "tenant_name": "Fintech Neo Global Ltd",
+    "violation_count": 0
+  }
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/tenants/e9b21f42-45e3-4c91-9e77-123456789abc/whitelist
+```
+
+---
+
+### 8.5 Super Admin Blacklist Client
+Immediately blacklists an external client organization, revoking all credentials and returning HTTP 403 Forbidden on all API endpoints.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/admin/tenants/:id/blacklist`
+- **Authentication:** Super Admin
+
+#### Request Body
+```json
+{
+  "reason": "Suspicious transaction velocity / AML evasion investigation"
+}
+```
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "message": "Tenant blacklisted",
+  "status": "SUCCESS",
+  "tenant": {
+    "blacklist_reason": "Suspicious transaction velocity / AML evasion investigation",
+    "id": "e9b21f42-45e3-4c91-9e77-123456789abc",
+    "status": "BLACKLISTED",
+    "tenant_code": "FINTECH_NEO",
+    "violation_count": 0
+  }
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/tenants/e9b21f42-45e3-4c91-9e77-123456789abc/blacklist \
+  -H "Content-Type: application/json" \
+  -d '{"reason": "Suspicious transaction velocity / AML evasion investigation"}'
+```
+
+---
+
+### 8.6 Simulate Platform Policy Violation (Automated Blacklisting)
+Simulates detection of platform rules violations (e.g. sanctions hit, transaction anomaly threshold breached, unauthorized network origin, AML pattern). Automatically increments `violation_count` and revokes API credentials.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/admin/tenants/:id/simulate-violation`
+- **Authentication:** System / Super Admin
+
+#### Request Body
+```json
+{
+  "violation_type": "SANCTIONS_REGISTRY_MATCH",
+  "details": "Beneficiary match on international OFAC/UN consolidated sanctions watch list"
+}
+```
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "message": "Platform automated blacklist triggered due to platform rule violation. Client credentials revoked.",
+  "status": "BLACKLISTED",
+  "tenant": {
+    "blacklist_reason": "Platform automated blacklist: SANCTIONS_REGISTRY_MATCH: Beneficiary match on international OFAC/UN consolidated sanctions watch list",
+    "id": "a0000000-0000-0000-0000-000000000001",
+    "status": "BLACKLISTED",
+    "tenant_code": "WALLET_APP",
+    "violation_count": 1
+  }
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/admin/tenants/a0000000-0000-0000-0000-000000000001/simulate-violation \
+  -H "Content-Type: application/json" \
+  -d '{
+    "violation_type": "SANCTIONS_REGISTRY_MATCH",
+    "details": "Beneficiary match on international OFAC/UN consolidated sanctions watch list"
+  }'
+```
+
+---
+
+## Section 9: Tenant Custom Post-No-Debit (PND) Rules
+
+Allows individual tenants to configure automated compliance, AML, and risk thresholds (e.g. KYC single caps, daily velocity) that autonomously dish out system Post-No-Debits on breaching customer accounts.
+
+### 9.1 Register Tenant Custom Compliance PND Rule
+Registers a custom PND rule for a specific tenant instance.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/tenants/pnd-rules`
+- **Authentication:** Tenant Admin (`Bearer <token>`)
+
+#### Request Body
+```json
+{
+  "tenant_id": "a0000000-0000-0000-0000-000000000001",
+  "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
+  "rule_type": "KYC_TIER_LIMIT",
+  "max_single_amount": "50000.00",
+  "max_daily_cumulative": null,
+  "is_enabled": true
+}
+```
+
+#### Response (Success - 201 Created)
+- **Status:** `201 Created`
+```json
+{
+  "message": "Tenant custom compliance PND rule registered",
+  "rule": {
+    "id": "4b92c431-7e88-4f21-992a-112233445566",
+    "is_enabled": true,
+    "max_daily_cumulative": null,
+    "max_single_amount": "50000.00",
+    "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
+    "rule_type": "KYC_TIER_LIMIT",
+    "tenant_id": "a0000000-0000-0000-0000-000000000001"
+  },
+  "status": "SUCCESS"
+}
+```
+
+#### Response (Failure - 400 Bad Request)
+- **Status:** `400 Bad Request`
+```json
+{
+  "message": "max_single_amount must be strictly positive",
+  "status": "ERROR"
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/tenants/pnd-rules \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "tenant_id": "a0000000-0000-0000-0000-000000000001",
+    "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
+    "rule_type": "KYC_TIER_LIMIT",
+    "max_single_amount": "50000.00",
+    "is_enabled": true
+  }'
+```
+
+---
+
+### 9.2 List Active PND Rules for Tenant
+Fetches all custom PND compliance rules configured for the given tenant.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/tenants/:tenant_id/pnd-rules`
+- **Authentication:** Tenant Admin (`Bearer <token>`)
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "rules": [
+    {
+      "id": "4b92c431-7e88-4f21-992a-112233445566",
+      "is_enabled": true,
+      "max_daily_cumulative": null,
+      "max_single_amount": "50000.00",
+      "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
+      "rule_type": "KYC_TIER_LIMIT",
+      "tenant_id": "a0000000-0000-0000-0000-000000000001"
+    }
+  ],
+  "status": "SUCCESS",
+  "tenant_id": "a0000000-0000-0000-0000-000000000001"
+}
+```
+
+#### cURL Example
+```bash
+curl -X GET http://127.0.0.1:8080/api/v1/tenants/a0000000-0000-0000-0000-000000000001/pnd-rules \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
 ---

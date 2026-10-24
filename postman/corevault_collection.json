@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "cba00001-2026-4000-8000-000000000001",
     "name": "CoreVault Core Banking API (Complete Edition)",
-    "description": "Comprehensive Postman Collection for CoreVault V1 — 100% Free & Open-Source Core Banking Engine in Rust.\n\nOrganized by domain crates:\n1. Health & Infrastructure Probes\n2. Staff Authentication & IAM (`cv-auth`)\n3. Account Management & NUBAN (`cv-account-manager` & `cv-nuban-validator`)\n4. Account Controls & Liens (`cv-account-manager`)\n5. Double-Entry Transfers (`cv-double-entry-engine`)\n6. Platform & Jurisdiction Configuration (`cv-platform-config-parser`)\n7. Audit Trail (`cv-audit`)",
+    "description": "Comprehensive Postman Collection for CoreVault V1 — 100% Free & Open-Source Core Banking Engine in Rust.\n\nOrganized by domain crates:\n1. Health & Infrastructure Probes\n2. Authentication & Client IAM (`cv-auth`)\n3. Account Management & NUBAN (`cv-account-manager` & `cv-nuban-validator`)\n4. Account Controls & Liens (`cv-account-manager`)\n5. Double-Entry Transfers (`cv-double-entry-engine`)\n6. Platform & Jurisdiction Configuration (`cv-platform-config-parser`)\n7. Audit Trail (`cv-audit`)\n8. Admin Tenant & Client Governance (`cv-transaction-api`)\n9. Tenant Custom PND Rules (`cv-account-manager` & `cv-transaction-api`)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -35,12 +35,86 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/live",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "live"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "live"
+              ]
             },
             "description": "Lightweight probe to verify that the HTTP process is responsive."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health/live",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UP\",\n  \"service\": \"corevault-monolith\"\n}"
+            },
+            {
+              "name": "Failure Example - 503 Service Unavailable",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health/live",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "live"
+                  ]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"DOWN\",\n  \"error\": \"HTTP listener unresponsive\"\n}"
+            }
+          ]
         },
         {
           "name": "Check Readiness (/health/ready)",
@@ -68,17 +142,91 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/health/ready",
-              "host": ["{{baseUrl}}"],
-              "path": ["health", "ready"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
             },
             "description": "Verifies that downstream persistence layers (PostgreSQL and Valkey) are connected."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health/ready",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"READY\",\n  \"checks\": {\n    \"database\": \"UP\",\n    \"valkey\": \"UP\"\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 503 Not Ready",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/health/ready",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_READY\",\n  \"checks\": {\n    \"database\": \"DOWN\",\n    \"valkey\": \"UP\"\n  }\n}"
+            }
+          ]
         }
       ]
     },
     {
-      "name": "2. Staff Authentication & IAM (cv-auth)",
+      "name": "2. Authentication & Client IAM (cv-auth)",
       "description": "Powered by the `cv-auth` crate. Implements Argon2id password verification, cryptographic Ed25519/HMAC JWT token issuance, and caller session authorization.",
       "item": [
         {
@@ -113,16 +261,119 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"AdminSecurePass#2026\"\n}"
+              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"AdminSecurePass#2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             },
             "description": "Authenticates bank staff with Argon2id and returns a signed 15-minute access token."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"AdminSecurePass#2026\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMmFjMzQ1Ni03OGRl...\",\n  \"token_type\": \"Bearer\",\n  \"expires_in_seconds\": 900,\n  \"user\": {\n    \"id\": \"d9b4b611-6b74-4b53-9ecb-3cb84a60032b\",\n    \"email\": \"admin@corevault.bank\",\n    \"role\": \"OPERATIONS_OFFICER\",\n    \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\"\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"AdminSecurePass#2026\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid email or password\"\n}"
+            }
+          ]
         },
         {
           "name": "Get Authenticated User Identity",
@@ -154,12 +405,92 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
             },
             "description": "Validates the Bearer JWT token and returns caller identity and permissions."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "me"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"claims\": {\n    \"user_id\": \"d9b4b611-6b74-4b53-9ecb-3cb84a60032b\",\n    \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"role\": \"OPERATIONS_OFFICER\",\n    \"scopes\": [\n      \"*\"\n    ],\n    \"exp\": 1792842000\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/me",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "me"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid token scheme, expected Bearer\"\n}"
+            }
+          ]
         },
         {
           "name": "Login Rejection - Invalid Password",
@@ -190,16 +521,556 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"WrongGuessPassword123\"\n}"
+              "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"WrongGuessPassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             },
             "description": "Verifies that invalid password attempts are rejected."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Expected Rejection Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"WrongGuessPassword123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid email or password\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@corevault.bank\",\n  \"password\": \"WrongGuessPassword123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Email and password are required\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Issue M2M Client Token (client_credentials)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"M2M Token received and saved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.access_token).to.not.be.empty;",
+                  "    pm.expect(jsonData.token_type).to.eql(\"Bearer\");",
+                  "    pm.environment.set(\"m2mToken\", jsonData.access_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Authenticates external tenant machine-to-machine client using client_id and raw client_secret to obtain a scoped JWT."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMDAwMDAwMC0wMDAwLTAwMDAt...\",\n  \"token_type\": \"Bearer\",\n  \"expires_in_seconds\": 3600,\n  \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n  \"scopes\": [\n    \"transfers:write\",\n    \"accounts:read\",\n    \"accounts:write\",\n    \"admin:read\"\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid client_id or client_secret\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "M2M Token Rejection - Pending Approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error indicates pending admin approval\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"FORBIDDEN\");",
+                  "    pm.expect(jsonData.error).to.include(\"pending admin approval\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{newClientId}}\",\n  \"client_secret\": \"{{newClientSecret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Demonstrates rejection of un-whitelisted client still in PENDING state."
+          },
+          "response": [
+            {
+              "name": "Expected Rejection Example - 403 Forbidden",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{newClientId}}\",\n  \"client_secret\": \"{{newClientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"FORBIDDEN\",\n  \"error\": \"Client/Tenant onboarding is pending admin approval and whitelisting\"\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{newClientId}}\",\n  \"client_secret\": \"{{newClientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid client_id or client_secret\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "M2M Token Rejection - Blacklisted Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Error indicates client is blacklisted\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"FORBIDDEN\");",
+                  "    pm.expect(jsonData.error).to.include(\"blacklisted\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "token"
+              ]
+            },
+            "description": "Demonstrates rejection when a client tenant is in BLACKLISTED state due to compliance or platform rule breach."
+          },
+          "response": [
+            {
+              "name": "Expected Rejection Example - 403 Forbidden",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"FORBIDDEN\",\n  \"error\": \"Client/Tenant is blacklisted: Sanctions match on international watch list\",\n  \"violation_count\": 1\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"client_secret\": \"{{clientSecret}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "token"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Invalid client_id or client_secret\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -250,16 +1121,116 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Emeka Okafor Savings\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial}},\n  \"overdraft_limit\": \"0.00\"\n}"
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Emeka Okafor Savings\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial}},\n  \"overdraft_limit\": \"0.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
             },
             "description": "Creates a retail savings account and generates a verified 10-digit NUBAN."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Emeka Okafor Savings\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial}},\n  \"overdraft_limit\": \"0.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account\": {\n    \"id\": \"09a69771-95d4-4670-af40-9eb8a7ef231a\",\n    \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"customer_id\": \"c0000000-0000-0000-0000-000000000001\",\n    \"account_number\": \"0581234560\",\n    \"account_name\": \"Amina Bello Savings Account\",\n    \"gl_code\": \"2110001\",\n    \"account_type\": \"SAVINGS\",\n    \"currency\": \"NGN\",\n    \"ledger_balance\": \"0.00\",\n    \"available_balance\": \"0.00\",\n    \"lien_amount\": \"0.00\",\n    \"overdraft_limit\": \"0.00\",\n    \"status\": \"ACTIVE\",\n    \"pnd_source\": null,\n    \"pnd_reason\": null,\n    \"version\": 0\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Emeka Okafor Savings\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial}},\n  \"overdraft_limit\": \"0.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Bank code must be 3 digits\"\n}"
+            }
+          ]
         },
         {
           "name": "Open Current Account with Overdraft",
@@ -301,16 +1272,116 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Lagos Tech Ventures Current\",\n  \"gl_code\": \"2110002\",\n  \"account_type\": \"CURRENT\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial2}},\n  \"overdraft_limit\": \"50000.00\"\n}"
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Lagos Tech Ventures Current\",\n  \"gl_code\": \"2110002\",\n  \"account_type\": \"CURRENT\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial2}},\n  \"overdraft_limit\": \"50000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
             },
             "description": "Creates a corporate current account with approved overdraft headroom."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Lagos Tech Ventures Current\",\n  \"gl_code\": \"2110002\",\n  \"account_type\": \"CURRENT\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial2}},\n  \"overdraft_limit\": \"50000.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account\": {\n    \"id\": \"1a2b3c4d-5e6f-7a8b-9c0d-112233445566\",\n    \"account_number\": \"0589876543\",\n    \"account_name\": \"Emeka Nwosu Corporate Current\",\n    \"account_type\": \"CURRENT\",\n    \"overdraft_limit\": \"150000.00\",\n    \"status\": \"ACTIVE\"\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Lagos Tech Ventures Current\",\n  \"gl_code\": \"2110002\",\n  \"account_type\": \"CURRENT\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"{{bankCode}}\",\n  \"serial_number\": {{currentSerial2}},\n  \"overdraft_limit\": \"50000.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Invalid serial number for NUBAN generation\"\n}"
+            }
+          ]
         },
         {
           "name": "Account Opening Rejection - Invalid Bank Code",
@@ -342,16 +1413,116 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Invalid Code Test\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"5\",\n  \"serial_number\": 123456,\n  \"overdraft_limit\": \"0.00\"\n}"
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Invalid Code Test\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"5\",\n  \"serial_number\": 123456,\n  \"overdraft_limit\": \"0.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts"
+              ]
             },
             "description": "Validates that NUBAN generator rejects bank codes not conforming to 3 digits."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Expected Rejection Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Invalid Code Test\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"5\",\n  \"serial_number\": 123456,\n  \"overdraft_limit\": \"0.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Invalid bank code: expected 3 numeric characters\"\n}"
+            },
+            {
+              "name": "Failure Example - 500 Internal Error",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"customer_id\": \"{{customerId}}\",\n  \"account_name\": \"Invalid Code Test\",\n  \"gl_code\": \"2110001\",\n  \"account_type\": \"SAVINGS\",\n  \"currency\": \"NGN\",\n  \"bank_code\": \"5\",\n  \"serial_number\": 123456,\n  \"overdraft_limit\": \"0.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Internal account creation failure\"\n}"
+            }
+          ]
         },
         {
           "name": "Get Account by NUBAN",
@@ -378,12 +1549,92 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}"
+              ]
             },
             "description": "Retrieves the account balance and status by 10-digit NUBAN."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"account_number\": \"0581234560\",\n  \"status\": \"ACTIVE\",\n  \"pnd_source\": null,\n  \"pnd_reason\": null,\n  \"ledger_balance\": \"1500000.0000\",\n  \"available_balance\": \"1500000.0000\",\n  \"effective_available_funds\": \"1500000.0000\"\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Account not found\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -422,16 +1673,274 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Suspicious KYC documentation flagged for review\"\n}"
+              "raw": "{\n  \"reason\": \"Suspicious KYC documentation flagged for review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}", "pnd"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "pnd"
+              ]
             },
             "description": "Places a Post-No-Debit (PND) hold on the account. Debits are forbidden; credits remain allowed."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Suspicious KYC documentation flagged for review\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "pnd"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"previous_status\": \"ACTIVE\",\n  \"current_status\": \"POST_NO_DEBIT\",\n  \"pnd_source\": \"MANUAL_CLIENT_PND\",\n  \"reason\": \"Suspicious transaction pattern reported by client compliance officer\",\n  \"can_debit\": false,\n  \"can_credit\": true\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Suspicious KYC documentation flagged for review\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "pnd"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Account not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Lift Post-No-Debit (PND)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Account restored to ACTIVE status and PND cleared\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.current_status).to.eql(\"ACTIVE\");",
+                  "    pm.expect(jsonData.can_debit).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Customer completed Tier 2 KYC identity verification and source of funds documentation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd/lift",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "pnd",
+                "lift"
+              ]
+            },
+            "description": "Removes either a MANUAL_CLIENT_PND or SYSTEM_AUTOMATED_PND restriction and restores ACTIVE debiting capabilities."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Customer completed Tier 2 KYC identity verification and source of funds documentation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd/lift",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "pnd",
+                    "lift"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"previous_status\": \"POST_NO_DEBIT\",\n  \"current_status\": \"ACTIVE\",\n  \"pnd_source\": null,\n  \"pnd_reason\": null,\n  \"lift_notes\": \"Customer completed Tier 2 KYC identity verification and source of funds documentation\",\n  \"can_debit\": true,\n  \"can_credit\": true\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Customer completed Tier 2 KYC identity verification and source of funds documentation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/pnd/lift",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "pnd",
+                    "lift"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Account 0581234560 is not under Post-No-Debit\"\n}"
+            }
+          ]
         },
         {
           "name": "Freeze Account",
@@ -464,16 +1973,122 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"Court order warrant compliance freeze\"\n}"
+              "raw": "{\n  \"reason\": \"Court order warrant compliance freeze\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/freeze",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}", "freeze"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "freeze"
+              ]
             },
             "description": "Completely freezes account. Both credits and debits are strictly blocked."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Court order warrant compliance freeze\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/freeze",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "freeze"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"previous_status\": \"ACTIVE\",\n  \"current_status\": \"FROZEN\",\n  \"reason\": \"Court order / LEA directive #EFCC-2026-9912\",\n  \"can_debit\": false,\n  \"can_credit\": false\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Court order warrant compliance freeze\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/freeze",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "freeze"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Freeze reason is required\"\n}"
+            }
+          ]
         },
         {
           "name": "Activate Account (Restore)",
@@ -506,16 +2121,122 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reason\": \"KYC verification verified and approved by Compliance\"\n}"
+              "raw": "{\n  \"reason\": \"KYC verification verified and approved by Compliance\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/activate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}", "activate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "activate"
+              ]
             },
             "description": "Lifts restrictions and restores the account to ACTIVE."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"KYC verification verified and approved by Compliance\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/activate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "activate"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"previous_status\": \"POST_NO_DEBIT\",\n  \"current_status\": \"ACTIVE\",\n  \"reason\": \"Compliance audit cleared; restrictions lifted\",\n  \"can_debit\": true,\n  \"can_credit\": true\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"KYC verification verified and approved by Compliance\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/activate",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "activate"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Activation reason is required\"\n}"
+            }
+          ]
         },
         {
           "name": "Place Financial Lien (Hold)",
@@ -547,16 +2268,122 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pending debit card pre-authorization\"\n}"
+              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pending debit card pre-authorization\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}", "liens"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "liens"
+              ]
             },
             "description": "Places a financial hold on the account, reducing available balance without moving funds."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pending debit card pre-authorization\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "liens"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"placed_lien_amount\": \"250000.00\",\n  \"reason\": \"Collateral hold for loan application #LN-8831\",\n  \"action\": \"LIEN_PLACED\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pending debit card pre-authorization\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "liens"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Lien amount must be strictly positive\"\n}"
+            }
+          ]
         },
         {
           "name": "Release Financial Lien",
@@ -588,16 +2415,125 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pre-authorization expired or settled\"\n}"
+              "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pre-authorization expired or settled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens/release",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "accounts", "{{accountNumber}}", "liens", "release"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "accounts",
+                "{{accountNumber}}",
+                "liens",
+                "release"
+              ]
             },
             "description": "Releases an active lien, restoring the available balance."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pre-authorization expired or settled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "liens",
+                    "release"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"account_number\": \"0581234560\",\n  \"released_lien_amount\": \"250000.00\",\n  \"reason\": \"Loan obligations fully satisfied\",\n  \"action\": \"LIEN_RELEASED\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"15000.00\",\n  \"reason\": \"Pre-authorization expired or settled\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/accounts/{{accountNumber}}/liens/release",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "accounts",
+                    "{{accountNumber}}",
+                    "liens",
+                    "release"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Release amount must be strictly positive and <= current lien amount\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -650,16 +2586,119 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"25000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Payment for electrical installation\"\n}"
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"25000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Payment for electrical installation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/intra",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "intra"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "intra"
+              ]
             },
             "description": "Submits a transfer with automatic Debits == Credits verification."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"25000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Payment for electrical installation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"COMMITTED\",\n  \"transaction_id\": \"7d3a2f19-9182-4c55-8d99-abcdef012345\",\n  \"amount\": \"150000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Inter-account wholesale inventory settlement\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request (Imbalanced)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"25000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Payment for electrical installation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"VALIDATION_FAILED\",\n  \"error\": \"Imbalanced entry: sum debits != sum credits\"\n}"
+            }
+          ]
         },
         {
           "name": "Transfer Rejection - Negative Amount",
@@ -691,16 +2730,119 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"-500.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal negative amount transfer attempt\"\n}"
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"-500.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal negative amount transfer attempt\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/intra",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "intra"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "intra"
+              ]
             },
             "description": "Demonstrates security & invariant validation rejecting non-positive transfer amounts."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Expected Rejection Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"-500.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal negative amount transfer attempt\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"VALIDATION_FAILED\",\n  \"error\": \"Zero or negative amount is prohibited: -5000.00\"\n}"
+            },
+            {
+              "name": "Failure Example - 422 Unprocessable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"-500.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal negative amount transfer attempt\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Negative transfer amount rejected by double entry invariant validator\"\n}"
+            }
+          ]
         },
         {
           "name": "Transfer Rejection - Zero Amount",
@@ -732,16 +2874,409 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal zero amount transfer attempt\"\n}"
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal zero amount transfer attempt\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/transfers/intra",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "transfers", "intra"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "intra"
+              ]
             },
             "description": "Validates that double-entry ledger rejects transactions with 0.00 amount."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Expected Rejection Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal zero amount transfer attempt\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"VALIDATION_FAILED\",\n  \"error\": \"Zero or negative amount is prohibited: 0.00\"\n}"
+            },
+            {
+              "name": "Failure Example - 422 Unprocessable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"0.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Illegal zero amount transfer attempt\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Zero amount transfer invalid\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Transfer Rejection - Tenant Compliance Rule Breach",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409 Conflict\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Automated PND was enforced on source account\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"PND_ENFORCED\");",
+                  "    pm.expect(jsonData.pnd_source).to.eql(\"SYSTEM_AUTOMATED_PND\");",
+                  "    pm.expect(jsonData.triggered_rule).to.not.be.empty;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"85000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Transfer exceeding tenant tier 1 single cap\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/intra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "intra"
+              ]
+            },
+            "description": "Demonstrates automated platform enforcement when a debit breaches a tenant custom PND rule, dishing out a SYSTEM_AUTOMATED_PND."
+          },
+          "response": [
+            {
+              "name": "Expected Rejection Example - 409 Conflict",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"85000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Transfer exceeding tenant tier 1 single cap\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"PND_ENFORCED\",\n  \"error\": \"Transaction breached tenant compliance rule 'KYC_TIER_1_SINGLE_TRANSFER_CAP'. Account has been automatically placed under SYSTEM_AUTOMATED_PND\",\n  \"triggered_rule\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n  \"pnd_source\": \"SYSTEM_AUTOMATED_PND\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"85000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Transfer exceeding tenant tier 1 single cap\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"VALIDATION_FAILED\",\n  \"error\": \"Invalid source account identifier\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Transfer Rejection - Account Restricted Under PND",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403 Forbidden\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Account restricted error returned\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"ACCOUNT_RESTRICTED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"1000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Small transfer on account under PND\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/transfers/intra",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "transfers",
+                "intra"
+              ]
+            },
+            "description": "Demonstrates rejection of any subsequent debit attempt on an account that has been restricted under PND."
+          },
+          "response": [
+            {
+              "name": "Expected Rejection Example - 403 Forbidden",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"1000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Small transfer on account under PND\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ACCOUNT_RESTRICTED\",\n  \"error\": \"Account is under restriction (POST_NO_DEBIT) and cannot be debited\",\n  \"pnd_source\": \"SYSTEM_AUTOMATED_PND\",\n  \"pnd_reason\": \"SYSTEM_PND [KYC_TIER_1_SINGLE_TRANSFER_CAP]: Transfer amount 85000.00 NGN breached tenant rule limit\"\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"source_account_id\": \"{{sourceAccountId}}\",\n  \"destination_account_id\": \"{{destinationAccountId}}\",\n  \"amount\": \"1000.00\",\n  \"currency\": \"NGN\",\n  \"narration\": \"Small transfer on account under PND\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/transfers/intra",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "transfers",
+                    "intra"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"VALIDATION_FAILED\",\n  \"error\": \"Transfer legs invalid\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -774,12 +3309,92 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/config/jurisdictions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "config", "jurisdictions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "config",
+                "jurisdictions"
+              ]
             },
             "description": "Lists the countries currently configured in the platform."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"jurisdictions\": [\n    {\n      \"code\": \"NG\",\n      \"name\": \"Federal Republic of Nigeria\",\n      \"currency\": \"NGN\"\n    },\n    {\n      \"code\": \"GB\",\n      \"name\": \"United Kingdom\",\n      \"currency\": \"GBP\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 500 Internal Error",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Config directory not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Get Nigeria Banking & KYC Rules (NG.toml)",
@@ -807,12 +3422,95 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/config/jurisdictions/NG",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "config", "jurisdictions", "NG"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "config",
+                "jurisdictions",
+                "NG"
+              ]
             },
             "description": "Parses and returns the declarative TOML rules for Nigeria (NUBAN check digit, 3-tier KYC balance limits)."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions/NG",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions",
+                    "NG"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"jurisdiction\": \"NG\",\n  \"central_bank\": \"Central Bank of Nigeria (CBN)\",\n  \"base_currency\": \"NGN\",\n  \"clearing_rails\": [\n    \"NIBSS_NIP\",\n    \"RTGS\"\n  ],\n  \"kyc_tiers\": {\n    \"tier_1\": {\n      \"max_balance\": \"300000.00\",\n      \"max_daily_debit\": \"50000.00\"\n    },\n    \"tier_2\": {\n      \"max_balance\": \"1000000.00\",\n      \"max_daily_debit\": \"200000.00\"\n    },\n    \"tier_3\": {\n      \"max_balance\": \"unlimited\",\n      \"max_daily_debit\": \"5000000.00\"\n    }\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions/NG",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions",
+                    "NG"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Jurisdiction NG configuration not found\"\n}"
+            }
+          ]
         },
         {
           "name": "Get United Kingdom Banking Rules (GB.toml)",
@@ -840,12 +3538,95 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/config/jurisdictions/GB",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "config", "jurisdictions", "GB"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "config",
+                "jurisdictions",
+                "GB"
+              ]
             },
             "description": "Parses and returns the declarative TOML rules for the United Kingdom."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions/GB",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions",
+                    "GB"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"jurisdiction\": \"GB\",\n  \"regulator\": \"Financial Conduct Authority (FCA)\",\n  \"base_currency\": \"GBP\",\n  \"clearing_rails\": [\n    \"FASTER_PAYMENTS\",\n    \"BACS\",\n    \"CHAPS\"\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/config/jurisdictions/GB",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "config",
+                    "jurisdictions",
+                    "GB"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Jurisdiction GB configuration not found\"\n}"
+            }
+          ]
         }
       ]
     },
@@ -878,12 +3659,1162 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/audit/logs",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "audit", "logs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "audit",
+                "logs"
+              ]
             },
             "description": "Queries the immutable audit sink for historical regulatory events."
           },
-          "response": []
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/audit/logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "audit",
+                    "logs"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"count\": 2,\n  \"events\": [\n    {\n      \"id\": \"123e4567-e89b-12d3-a456-426614174000\",\n      \"entity_name\": \"Account\",\n      \"entity_id\": \"09a69771-95d4-4670-af40-9eb8a7ef231a\",\n      \"action\": \"CREATED\",\n      \"performed_by\": \"system\",\n      \"timestamp\": \"2026-10-24T00:00:00Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 401 Unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/audit/logs",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "audit",
+                    "logs"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"UNAUTHORIZED\",\n  \"message\": \"Audit logs require privileged authorization token\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Admin Tenant & Client Governance",
+      "description": "Super Admin endpoints for onboarding external client organizations, client credential generation, whitelisting, blacklisting, and platform violation simulation.",
+      "item": [
+        {
+          "name": "Onboard New Client / Tenant (Pending Whitelist)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Tenant created with PENDING status and raw secret displayed\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.tenant.status).to.eql(\"PENDING\");",
+                  "    pm.expect(jsonData.tenant.client_id).to.not.be.empty;",
+                  "    pm.expect(jsonData.tenant.client_secret).to.not.be.empty;",
+                  "    pm.environment.set(\"newTenantId\", jsonData.tenant.id);",
+                  "    pm.environment.set(\"newClientId\", jsonData.tenant.client_id);",
+                  "    pm.environment.set(\"newClientSecret\", jsonData.tenant.client_secret);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_code\": \"FINTECH_NEO\",\n  \"tenant_name\": \"Fintech Neo Global Ltd\",\n  \"base_currency\": \"NGN\",\n  \"allowed_ips\": [\n    \"127.0.0.1\",\n    \"::1\"\n  ],\n  \"scopes\": [\n    \"transfers:write\",\n    \"accounts:read\",\n    \"accounts:write\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants"
+              ]
+            },
+            "description": "Registers a new tenant/client organization. Status is initialized to PENDING until approved by Super Admin. Outputs raw client_secret once."
+          },
+          "response": [
+            {
+              "name": "Success Example - 201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_code\": \"FINTECH_NEO\",\n  \"tenant_name\": \"Fintech Neo Global Ltd\",\n  \"base_currency\": \"NGN\",\n  \"allowed_ips\": [\n    \"127.0.0.1\",\n    \"::1\"\n  ],\n  \"scopes\": [\n    \"transfers:write\",\n    \"accounts:read\",\n    \"accounts:write\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"message\": \"Tenant onboarded with PENDING status. Admin whitelisting required before API activation.\",\n  \"tenant\": {\n    \"id\": \"e9b21f42-45e3-4c91-9e77-123456789abc\",\n    \"tenant_code\": \"FINTECH_NEO\",\n    \"tenant_name\": \"Fintech Neo Global Ltd\",\n    \"base_currency\": \"NGN\",\n    \"status\": \"PENDING\",\n    \"client_id\": \"client_fintech_neo_a1b2c3d4e5f6\",\n    \"client_secret\": \"sec_live_9f8e7d6c5b4a3a2b1c0d\",\n    \"scopes\": [\n      \"transfers:write\",\n      \"accounts:read\",\n      \"accounts:write\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_code\": \"FINTECH_NEO\",\n  \"tenant_name\": \"Fintech Neo Global Ltd\",\n  \"base_currency\": \"NGN\",\n  \"allowed_ips\": [\n    \"127.0.0.1\",\n    \"::1\"\n  ],\n  \"scopes\": [\n    \"transfers:write\",\n    \"accounts:read\",\n    \"accounts:write\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"tenant_code and tenant_name are required\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List All Clients / Tenants",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Tenants list retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.tenants).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants"
+              ]
+            },
+            "description": "Returns all registered tenants with sanitized metadata (no raw secrets or credential hashes)."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"tenants\": [\n    {\n      \"id\": \"a0000000-0000-0000-0000-000000000001\",\n      \"tenant_code\": \"WALLET_APP\",\n      \"tenant_name\": \"CoreVault Native Wallet App\",\n      \"base_currency\": \"NGN\",\n      \"client_id\": \"client_wallet_app_seed001\",\n      \"status\": \"ACTIVE\",\n      \"allowed_ips\": [\n        \"127.0.0.1\",\n        \"::1\"\n      ],\n      \"scopes\": [\n        \"transfers:write\",\n        \"accounts:read\",\n        \"accounts:write\",\n        \"admin:read\"\n      ],\n      \"blacklist_reason\": null,\n      \"violation_count\": 0,\n      \"created_at\": \"2026-10-24T00:00:00Z\",\n      \"updated_at\": \"2026-10-24T00:00:00Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 500 Internal Error",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants"
+                  ]
+                }
+              },
+              "status": "Internal Server Error",
+              "code": 500,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Failed to read tenants registry\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Client / Tenant by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Tenant details retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.tenant.id).to.eql(pm.environment.get(\"tenantId\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants",
+                "{{tenantId}}"
+              ]
+            },
+            "description": "Retrieves tenant details by UUID."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"tenant\": {\n    \"id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"tenant_code\": \"WALLET_APP\",\n    \"tenant_name\": \"CoreVault Native Wallet App\",\n    \"base_currency\": \"NGN\",\n    \"client_id\": \"client_wallet_app_seed001\",\n    \"status\": \"ACTIVE\",\n    \"allowed_ips\": [\n      \"127.0.0.1\",\n      \"::1\"\n    ],\n    \"scopes\": [\n      \"transfers:write\",\n      \"accounts:read\",\n      \"accounts:write\",\n      \"admin:read\"\n    ],\n    \"blacklist_reason\": null,\n    \"violation_count\": 0,\n    \"created_at\": \"2026-10-24T00:00:00Z\",\n    \"updated_at\": \"2026-10-24T00:00:00Z\"\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Tenant not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Super Admin Whitelist / Activate Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Tenant promoted to ACTIVE status\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.tenant.status).to.eql(\"ACTIVE\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/whitelist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants",
+                "{{tenantId}}",
+                "whitelist"
+              ]
+            },
+            "description": "Admin operation that activates a client organization and enables API token generation."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/whitelist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "whitelist"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"message\": \"Tenant successfully whitelisted and activated\",\n  \"tenant\": {\n    \"id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"tenant_code\": \"FINTECH_NEO\",\n    \"tenant_name\": \"Fintech Neo Global Ltd\",\n    \"base_currency\": \"NGN\",\n    \"client_id\": \"client_fintech_neo_a1b2c3d4e5f6\",\n    \"status\": \"ACTIVE\",\n    \"allowed_ips\": [\n      \"127.0.0.1\",\n      \"::1\"\n    ],\n    \"scopes\": [\n      \"transfers:write\",\n      \"accounts:read\",\n      \"accounts:write\"\n    ],\n    \"blacklist_reason\": null,\n    \"violation_count\": 0\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/whitelist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "whitelist"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Tenant not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Super Admin Blacklist Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Tenant status changed to BLACKLISTED\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.tenant.status).to.eql(\"BLACKLISTED\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Suspicious transaction velocity / AML evasion investigation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/blacklist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants",
+                "{{tenantId}}",
+                "blacklist"
+              ]
+            },
+            "description": "Immediately revokes client API access and places client in BLACKLISTED status."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Suspicious transaction velocity / AML evasion investigation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/blacklist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "blacklist"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"message\": \"Tenant blacklisted\",\n  \"tenant\": {\n    \"id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"tenant_code\": \"FINTECH_NEO\",\n    \"status\": \"BLACKLISTED\",\n    \"blacklist_reason\": \"Suspicious transaction velocity / AML evasion investigation\",\n    \"violation_count\": 0\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Suspicious transaction velocity / AML evasion investigation\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/blacklist",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "blacklist"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Tenant not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Simulate Platform Violation (Automated Blacklisting)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Platform automated blacklist triggered\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"BLACKLISTED\");",
+                  "    pm.expect(jsonData.tenant.status).to.eql(\"BLACKLISTED\");",
+                  "    pm.expect(jsonData.tenant.violation_count).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"violation_type\": \"SANCTIONS_REGISTRY_MATCH\",\n  \"details\": \"Beneficiary match on international OFAC/UN consolidated sanctions watch list\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/simulate-violation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "tenants",
+                "{{tenantId}}",
+                "simulate-violation"
+              ]
+            },
+            "description": "Simulates detection of platform rules violation by CBA security daemon, triggering instant automated blacklisting."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"violation_type\": \"SANCTIONS_REGISTRY_MATCH\",\n  \"details\": \"Beneficiary match on international OFAC/UN consolidated sanctions watch list\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/simulate-violation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "simulate-violation"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"BLACKLISTED\",\n  \"message\": \"Platform automated blacklist triggered due to platform rule violation. Client credentials revoked.\",\n  \"tenant\": {\n    \"id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"tenant_code\": \"WALLET_APP\",\n    \"status\": \"BLACKLISTED\",\n    \"blacklist_reason\": \"Platform automated blacklist: SANCTIONS_REGISTRY_MATCH: Beneficiary match on international OFAC/UN consolidated sanctions watch list\",\n    \"violation_count\": 1\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"violation_type\": \"SANCTIONS_REGISTRY_MATCH\",\n  \"details\": \"Beneficiary match on international OFAC/UN consolidated sanctions watch list\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/admin/tenants/{{tenantId}}/simulate-violation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "tenants",
+                    "{{tenantId}}",
+                    "simulate-violation"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"NOT_FOUND\",\n  \"message\": \"Tenant not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "9. Tenant Custom PND Rules",
+      "description": "Endpoints allowing tenants to configure custom compliance, AML, and risk thresholds (e.g. KYC single caps, daily velocity) that automatically dish out system Post-No-Debits.",
+      "item": [
+        {
+          "name": "Create Tenant Compliance PND Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test(\"Rule registered successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.rule.rule_name).to.eql(\"KYC_TIER_1_SINGLE_TRANSFER_CAP\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rule_name\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n  \"rule_type\": \"KYC_TIER_LIMIT\",\n  \"max_single_amount\": \"50000.00\",\n  \"max_daily_cumulative\": null,\n  \"is_enabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/pnd-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "pnd-rules"
+              ]
+            },
+            "description": "Defines a custom PND rule. Transactions breaching max_single_amount or max_daily_cumulative automatically trigger a SYSTEM_AUTOMATED_PND."
+          },
+          "response": [
+            {
+              "name": "Success Example - 201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rule_name\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n  \"rule_type\": \"KYC_TIER_LIMIT\",\n  \"max_single_amount\": \"50000.00\",\n  \"max_daily_cumulative\": null,\n  \"is_enabled\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenants/pnd-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "pnd-rules"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"message\": \"Tenant custom compliance PND rule registered\",\n  \"rule\": {\n    \"id\": \"4b92c431-7e88-4f21-992a-112233445566\",\n    \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n    \"rule_name\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n    \"rule_type\": \"KYC_TIER_LIMIT\",\n    \"max_single_amount\": \"50000.00\",\n    \"max_daily_cumulative\": null,\n    \"is_enabled\": true\n  }\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"rule_name\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n  \"rule_type\": \"KYC_TIER_LIMIT\",\n  \"max_single_amount\": \"50000.00\",\n  \"max_daily_cumulative\": null,\n  \"is_enabled\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenants/pnd-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "pnd-rules"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"max_single_amount must be strictly positive\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Active PND Rules for Tenant",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Rules list retrieved\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"SUCCESS\");",
+                  "    pm.expect(jsonData.rules).to.be.an(\"array\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/pnd-rules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "{{tenantId}}",
+                "pnd-rules"
+              ]
+            },
+            "description": "Retrieves all custom PND compliance rules configured for the given tenant."
+          },
+          "response": [
+            {
+              "name": "Success Example - 200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/pnd-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenantId}}",
+                    "pnd-rules"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"SUCCESS\",\n  \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n  \"rules\": [\n    {\n      \"id\": \"4b92c431-7e88-4f21-992a-112233445566\",\n      \"tenant_id\": \"a0000000-0000-0000-0000-000000000001\",\n      \"rule_name\": \"KYC_TIER_1_SINGLE_TRANSFER_CAP\",\n      \"rule_type\": \"KYC_TIER_LIMIT\",\n      \"max_single_amount\": \"50000.00\",\n      \"max_daily_cumulative\": null,\n      \"is_enabled\": true\n    }\n  ]\n}"
+            },
+            {
+              "name": "Failure Example - 400 Bad Request",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tenants/{{tenantId}}/pnd-rules",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "{{tenantId}}",
+                    "pnd-rules"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ERROR\",\n  \"message\": \"Invalid tenant UUID\"\n}"
+            }
+          ]
         }
       ]
     }
@@ -892,14 +4823,18 @@
     {
       "listen": "prerequest",
       "script": {
-        "exec": ["// Global Collection Pre-request Script"],
+        "exec": [
+          "// Global Collection Pre-request Script"
+        ],
         "type": "text/javascript"
       }
     },
     {
       "listen": "test",
       "script": {
-        "exec": ["// Global Collection Test Script"],
+        "exec": [
+          "// Global Collection Test Script"
+        ],
         "type": "text/javascript"
       }
     }
