@@ -1,0 +1,54 @@
+### CoreVault — Intra-Bank (On-Us) Transfer
+### Requires Bearer token and two account UUIDs (not NUBANs).
+### IMPORTANT: amounts MUST be decimal strings, never JSON floats.
+
+@baseUrl = http://localhost:8080
+@token = eyJ...replace-with-real-token
+
+# ─── Post an intra-bank transfer ─────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/transfers/intra
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "source_account_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "destination_account_id": "ffffffff-0000-1111-2222-333333333333",
+  "amount": "10000.00",
+  "currency": "NGN",
+  "narration": "Salary payment — November 2026"
+}
+
+### Success — 200 OK:
+### {
+###   "status": "SUCCESS",
+###   "journal_id": "<uuid>",
+###   "message": "Transfer posted successfully"
+### }
+
+### Restriction — 403 Forbidden (source under PND):
+### {
+###   "status": "ACCOUNT_RESTRICTED",
+###   "error": "Account is under restriction (POST_NO_DEBIT) and cannot be debited",
+###   "pnd_source": "SYSTEM_AUTOMATED",
+###   "pnd_reason": "Transfer amount 75000.00 NGN breached tenant rule limit"
+### }
+
+# ─── Configure a tenant PND rule (DAILY_DEBIT_CAP) ──────────────────────────
+POST {{baseUrl}}/api/v1/tenants/pnd-rules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tenant_id": "your-tenant-uuid",
+  "rule_name": "DAILY_DEBIT_CAP",
+  "threshold_amount": "50000.00",
+  "currency": "NGN"
+}
+
+# ─── View tenant PND rules ───────────────────────────────────────────────────
+GET {{baseUrl}}/api/v1/tenants/your-tenant-uuid/pnd-rules
+Authorization: Bearer {{token}}
+
+# ─── Query audit log ─────────────────────────────────────────────────────────
+GET {{baseUrl}}/api/v1/audit/logs?page=1&limit=20
+Authorization: Bearer {{token}}

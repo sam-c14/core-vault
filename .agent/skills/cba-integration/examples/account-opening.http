@@ -1,0 +1,82 @@
+### CoreVault — Account Lifecycle
+### Requires Bearer token from m2m-auth.http
+
+@baseUrl = http://localhost:8080
+@token = eyJ...replace-with-real-token
+
+# ─── Open a Tier 1 account ────────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "account_name": "Jane Doe",
+  "currency": "NGN",
+  "bank_code": "058",
+  "kyc_tier": 1
+}
+
+### Expected: 201 Created
+### {
+###   "status": "SUCCESS",
+###   "account": {
+###     "id": "<uuid>",
+###     "account_number": "0123456789",  ← 10-digit NUBAN
+###     "status": "ACTIVE",
+###     "ledger_balance": "0.00",
+###     "available_balance": "0.00"
+###   }
+### }
+
+# ─── List all accounts ────────────────────────────────────────────────────────
+GET {{baseUrl}}/api/v1/accounts
+Authorization: Bearer {{token}}
+
+# ─── Get account by NUBAN ─────────────────────────────────────────────────────
+@nuban = 0123456789
+
+GET {{baseUrl}}/api/v1/accounts/{{nuban}}
+Authorization: Bearer {{token}}
+
+# ─── Place PND ────────────────────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/pnd
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "KYC documentation outstanding",
+  "source": "MANUAL_OPERATOR"
+}
+
+# ─── Lift PND ─────────────────────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/pnd/lift
+Authorization: Bearer {{token}}
+
+# ─── Freeze account ───────────────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/freeze
+Authorization: Bearer {{token}}
+
+# ─── Activate (unfreeze) account ──────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/activate
+Authorization: Bearer {{token}}
+
+# ─── Place a lien of ₦5,000 ──────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/liens
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": "5000.00",
+  "currency": "NGN",
+  "reference": "LIEN-REF-001",
+  "reason": "Pending cheque clearance"
+}
+
+# ─── Release lien ─────────────────────────────────────────────────────────────
+POST {{baseUrl}}/api/v1/accounts/{{nuban}}/liens/release
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reference": "LIEN-REF-001"
+}

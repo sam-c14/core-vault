@@ -1,0 +1,29 @@
+### CoreVault — M2M Authentication
+### Obtain a Bearer token using client credentials.
+
+@baseUrl = http://localhost:8080
+@clientId = your-client-id
+@clientSecret = your-client-secret
+
+# ─── Step 1: Exchange credentials for token ───────────────────────────────────
+POST {{baseUrl}}/api/v1/auth/token
+Content-Type: application/json
+
+{
+  "client_id": "{{clientId}}",
+  "client_secret": "{{clientSecret}}"
+}
+
+### Expected: 200 OK
+### {
+###   "access_token": "eyJ...",
+###   "token_type": "Bearer",
+###   "expires_in": 3600
+### }
+
+# ─── Step 2: Who am I? ────────────────────────────────────────────────────────
+# @name me
+GET {{baseUrl}}/api/v1/auth/me
+Authorization: Bearer {{access_token}}
+
+### Expected: 200 OK — returns tenant/user identity
