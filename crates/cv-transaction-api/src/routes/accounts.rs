@@ -10,9 +10,23 @@ use serde_json::{json, Value};
 
 pub fn router(state: AppState) -> Router {
     Router::new()
-        .route("/api/v1/accounts", post(create_account))
+        .route("/api/v1/accounts", post(create_account).get(list_accounts))
         .route("/api/v1/accounts/:nuban", get(get_account))
         .with_state(state)
+}
+
+async fn list_accounts(
+    State(state): State<AppState>,
+) -> (StatusCode, Json<Value>) {
+    let accounts = state.accounts.read().unwrap();
+    let list: Vec<_> = accounts.values().cloned().collect();
+    (
+        StatusCode::OK,
+        Json(json!({
+            "status": "SUCCESS",
+            "accounts": list
+        })),
+    )
 }
 
 async fn create_account(
