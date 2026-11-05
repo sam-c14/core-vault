@@ -38,7 +38,7 @@ tower = { version = "0.4", features = ["full"] }
 tower-http = { version = "0.5", features = ["trace", "cors"] }
 
 # Database & Storage
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "rust_decimal"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "uuid", "chrono", "rust_decimal", "macros"] }
 redis = { version = "0.25", features = ["tokio-comp", "connection-manager"] }
 
 # High-Precision Financial Math & Types
@@ -60,6 +60,7 @@ jsonwebtoken = "9.3"
 thiserror = "1.0"
 anyhow = "1.0"
 async-trait = "0.1"
+dotenvy = "0.15"
 
 # Observability
 tracing = "0.1"
@@ -83,6 +84,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 sqlx = { workspace = true }
 redis = { workspace = true }
+dotenvy = { workspace = true }
 anyhow = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

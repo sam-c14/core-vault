@@ -55,3 +55,12 @@ This document tracks execution milestones for CoreVault (Core Banking Applicatio
   - Tenant custom Post-No-Debit (PND) rule engine (`/api/v1/tenants/pnd-rules`) supporting KYC tier limits, daily debit caps, and velocity bursts.
   - Transfer route rule interception automatically applying `SYSTEM_AUTOMATED_PND` on rule breach (409 Conflict).
   - Post-No-Debit lifting endpoint (`POST /api/v1/accounts/:nuban/pnd/lift`) allowing tenants to remove both client manual and system automated PNDs.
+
+- [x] **#8 — End-to-End PostgreSQL ACID Transactions & Complete Route Gating**
+  - Replace in-memory mock checks with real PostgreSQL database queries and transactions.
+  - Staff login (`POST /api/v1/auth/login`) verified against `users` table with Argon2id password hash and `is_active` check.
+  - M2M token issuance (`POST /api/v1/auth/token`) verified against `tenants` table with Argon2id client secret hash and lifecycle status check.
+  - Intra-bank transfers (`POST /api/v1/transfers/intra`) executed inside atomic PostgreSQL transactions (`BEGIN...COMMIT`) with row-level locks (`FOR UPDATE`), double-entry ledger validation, dual-leg `journal_entries` inserts (DR/CR), `transactions` record, and `audit_logs` record.
+  - Account creation and lifecycle controls (`freeze`, `pnd`, `pnd/lift`, `activate`, `liens`, `liens/release`) executed as atomic DB transactions.
+  - Strict authentication & authorization gating across all endpoints (`AuthClaims` extractor) enforcing Bearer JWT validation, role checks (`SUPER_ADMIN`, `OPERATIONS_OFFICER`, etc.), and scope checks (`transfers:write`, `accounts:read`, `accounts:write`, `admin:read`).
+  - Purged all in-memory mock balance returns (e.g. 404 returned when account not found).

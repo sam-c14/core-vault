@@ -23,7 +23,7 @@ pub fn create_router_with_state(state: AppState) -> Router {
         .merge(routes::tenant_rules::router(state.clone()))
         .merge(routes::account_controls::router(state.clone()))
         .merge(routes::config::router())
-        .merge(routes::audit::router(state.audit_sink.clone()))
+        .merge(routes::audit::router(state.clone()))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
 }

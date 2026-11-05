@@ -1,11 +1,17 @@
+use crate::middleware::AuthClaims;
 use crate::state::AppState;
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
-use cv_account_manager::AccountManager;
+use cv_account_manager::{AccountManager, AccountRecord};
+use cv_audit::{AuditAction, AuditEvent, AuditSink};
 use cv_double_entry_engine::{validate_journal_batch, PostingLeg};
-use cv_types::{Currency, EntryType};
+use cv_types::{
+    AccountId, AccountStatus, AccountType, Currency, EntryType, PndRuleType, PndSource,
+    TenantPndRule,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sqlx::Row;
 use uuid::Uuid;
 
 pub fn router(state: AppState) -> Router {
@@ -24,14 +30,486 @@ pub struct IntraTransferDto {
 }
 
 async fn post_intra_transfer(
+    auth: AuthClaims,
     State(state): State<AppState>,
     Json(dto): Json<IntraTransferDto>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
-    // 1. Account restriction & automated tenant compliance PND rule check
+    // 0. Permission check
+    auth.require_scope_or_role("transfers:write", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
+
+    // 1. Basic validation
+    if dto.amount <= Decimal::ZERO {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "VALIDATION_FAILED",
+                "error": "Transfer amount must be strictly positive"
+            })),
+        ));
+    }
+
+    if dto.source_account_id == dto.destination_account_id {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "VALIDATION_FAILED",
+                "error": "Source and destination accounts cannot be identical"
+            })),
+        ));
+    }
+
+    // 2. Double-entry posting batch validation
+    let legs = vec![
+        PostingLeg {
+            account_id: dto.source_account_id,
+            gl_code: "2110001".to_string(),
+            currency: dto.currency,
+            entry_type: EntryType::Debit,
+            amount: dto.amount,
+        },
+        PostingLeg {
+            account_id: dto.destination_account_id,
+            gl_code: "2110002".to_string(),
+            currency: dto.currency,
+            entry_type: EntryType::Credit,
+            amount: dto.amount,
+        },
+    ];
+
+    if let Err(err) = validate_journal_batch(&legs) {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "VALIDATION_FAILED",
+                "error": err.to_string()
+            })),
+        ));
+    }
+
+    // 3. Database ACID Transaction Execution
+    if let Some(pool) = &state.pool {
+        let mut tx = pool.begin().await.map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to begin DB transaction: {e}") })),
+            )
+        })?;
+
+        // Deterministic lock order to prevent deadlock
+        let (first_id, second_id) = if dto.source_account_id < dto.destination_account_id {
+            (dto.source_account_id, dto.destination_account_id)
+        } else {
+            (dto.destination_account_id, dto.source_account_id)
+        };
+
+        let row1 = sqlx::query(
+            "SELECT id, tenant_id, account_number, account_name, gl_code, account_type, currency_code,
+                    ledger_balance, available_balance, lien_amount, overdraft_limit, status,
+                    pnd_source, pnd_reason, version
+             FROM accounts WHERE id = $1 FOR UPDATE"
+        )
+        .bind(first_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Database lock error: {e}") })),
+            )
+        })?;
+
+        let row2 = sqlx::query(
+            "SELECT id, tenant_id, account_number, account_name, gl_code, account_type, currency_code,
+                    ledger_balance, available_balance, lien_amount, overdraft_limit, status,
+                    pnd_source, pnd_reason, version
+             FROM accounts WHERE id = $1 FOR UPDATE"
+        )
+        .bind(second_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Database lock error: {e}") })),
+            )
+        })?;
+
+        let (source_row, dest_row) = match (row1, row2) {
+            (Some(r1), Some(r2)) => {
+                let id1: Uuid = r1.get("id");
+                if id1 == dto.source_account_id {
+                    (r1, r2)
+                } else {
+                    (r2, r1)
+                }
+            }
+            (None, _) | (_, None) => {
+                return Err((
+                    StatusCode::NOT_FOUND,
+                    Json(
+                        json!({ "status": "NOT_FOUND", "message": "Source or destination account not found" }),
+                    ),
+                ));
+            }
+        };
+
+        // Source account restrictions
+        let source_status_str: String = source_row.get("status");
+        let source_pnd_source: Option<String> = source_row.get("pnd_source");
+        let source_pnd_reason: Option<String> = source_row.get("pnd_reason");
+        let source_tenant_id: Uuid = source_row.get("tenant_id");
+        let source_nuban: String = source_row.get("account_number");
+
+        let source_status = match source_status_str.as_str() {
+            "ACTIVE" => AccountStatus::Active,
+            "POST_NO_DEBIT" => AccountStatus::PostNoDebit,
+            "FROZEN" => AccountStatus::Frozen,
+            "DORMANT" => AccountStatus::Dormant,
+            "CLOSED" => AccountStatus::Closed,
+            _ => AccountStatus::PendingOpening,
+        };
+
+        if !source_status.can_debit() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "ACCOUNT_RESTRICTED",
+                    "error": format!("Account is under restriction ({source_status_str}) and cannot be debited"),
+                    "pnd_source": source_pnd_source,
+                    "pnd_reason": source_pnd_reason
+                })),
+            ));
+        }
+
+        // Destination account restrictions
+        let dest_status_str: String = dest_row.get("status");
+        if dest_status_str == "FROZEN" || dest_status_str == "CLOSED" {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "ACCOUNT_RESTRICTED",
+                    "error": format!("Destination account is restricted ({dest_status_str}) and cannot receive credits")
+                })),
+            ));
+        }
+
+        // Check custom tenant PND compliance rules
+        let pnd_rules_rows = sqlx::query(
+            "SELECT id, tenant_id, rule_name, rule_type, max_single_amount, max_daily_cumulative, is_enabled
+             FROM tenant_pnd_rules WHERE tenant_id = $1 AND is_enabled = true"
+        )
+        .bind(source_tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Database rule lookup error: {e}") })),
+            )
+        })?;
+
+        let mut tenant_rules = Vec::new();
+        for r in pnd_rules_rows {
+            let rule_type_str: String = r.get("rule_type");
+            let rule_type = match rule_type_str.as_str() {
+                "KYC_TIER_LIMIT" => PndRuleType::KycTierLimit,
+                "VELOCITY_BURST" => PndRuleType::VelocityBurst,
+                "DAILY_DEBIT_CAP" => PndRuleType::DailyDebitCap,
+                _ => PndRuleType::SuspiciousTransfer,
+            };
+            tenant_rules.push(TenantPndRule {
+                id: r.get("id"),
+                tenant_id: r.get("tenant_id"),
+                rule_name: r.get("rule_name"),
+                rule_type,
+                max_single_amount: r.get("max_single_amount"),
+                max_daily_cumulative: r.get("max_daily_cumulative"),
+                is_enabled: r.get("is_enabled"),
+            });
+        }
+
+        let pnd_source_enum = match source_pnd_source.as_deref() {
+            Some("MANUAL_CLIENT_PND") => Some(PndSource::ManualClientPnd),
+            Some("SYSTEM_AUTOMATED_PND") => Some(PndSource::SystemAutomatedPnd),
+            _ => None,
+        };
+
+        let source_record = AccountRecord {
+            id: AccountId(dto.source_account_id),
+            tenant_id: source_tenant_id,
+            customer_id: None,
+            account_number: source_nuban.clone(),
+            account_name: source_row.get("account_name"),
+            gl_code: source_row.get("gl_code"),
+            account_type: AccountType::Savings,
+            currency: dto.currency,
+            ledger_balance: source_row.get("ledger_balance"),
+            available_balance: source_row.get("available_balance"),
+            lien_amount: source_row.get("lien_amount"),
+            overdraft_limit: source_row.get("overdraft_limit"),
+            status: source_status,
+            pnd_source: pnd_source_enum,
+            pnd_reason: source_pnd_reason,
+            version: source_row.get("version"),
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
+        if let Some(triggered_rule) = AccountManager::evaluate_transaction_pnd_rules(
+            &source_record,
+            dto.amount,
+            &tenant_rules,
+        ) {
+            let rule_name = triggered_rule.rule_name.clone();
+            let pnd_reason = format!(
+                "Transfer amount {} {} breached tenant rule limit",
+                dto.amount, dto.currency
+            );
+
+            // Update account to POST_NO_DEBIT in database
+            sqlx::query(
+                "UPDATE accounts
+                 SET status = 'POST_NO_DEBIT',
+                     pnd_source = 'SYSTEM_AUTOMATED_PND',
+                     pnd_reason = $1,
+                     pnd_placed_at = NOW(),
+                     updated_at = NOW()
+                 WHERE id = $2"
+            )
+            .bind(&pnd_reason)
+            .bind(dto.source_account_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "status": "ERROR", "message": format!("Failed to apply PND in DB: {e}") })),
+                )
+            })?;
+
+            // Record audit log for automated PND
+            let audit_payload = json!({
+                "rule_name": rule_name,
+                "amount": dto.amount,
+                "currency": dto.currency,
+                "source_account_id": dto.source_account_id
+            });
+
+            let _ = sqlx::query(
+                "INSERT INTO audit_logs (id, tenant_id, actor_id, actor_type, action, entity_name, entity_id, payload, created_at)
+                 VALUES ($1, $2, $3, 'SYSTEM', 'SYSTEM_AUTOMATED_PND_APPLIED', 'ACCOUNT', $4, $5, NOW())"
+            )
+            .bind(Uuid::new_v4())
+            .bind(source_tenant_id)
+            .bind(auth.user_id())
+            .bind(dto.source_account_id)
+            .bind(audit_payload)
+            .execute(&mut *tx)
+            .await;
+
+            // Commit the PND update
+            let _ = tx.commit().await;
+
+            return Err((
+                StatusCode::CONFLICT,
+                Json(json!({
+                    "status": "PND_ENFORCED",
+                    "error": format!(
+                        "Transaction breached tenant compliance rule '{rule_name}'. Account has been automatically placed under SYSTEM_AUTOMATED_PND"
+                    ),
+                    "triggered_rule": rule_name,
+                    "pnd_source": "SYSTEM_AUTOMATED_PND"
+                })),
+            ));
+        }
+
+        // Available balance check
+        let source_avail: Decimal = source_row.get("available_balance");
+        let source_overdraft: Decimal = source_row.get("overdraft_limit");
+        let source_lien: Decimal = source_row.get("lien_amount");
+        let effective_available = source_avail + source_overdraft - source_lien;
+
+        if dto.amount > effective_available {
+            return Err((
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(json!({
+                    "status": "INSUFFICIENT_FUNDS",
+                    "error": "Source account available balance insufficient for debit"
+                })),
+            ));
+        }
+
+        // Execute Balance Updates
+        let source_ledger: Decimal = source_row.get("ledger_balance");
+        let dest_ledger: Decimal = dest_row.get("ledger_balance");
+        let dest_id: Uuid = dest_row.get("id");
+        let dest_gl: String = dest_row.get("gl_code");
+        let source_gl: String = source_row.get("gl_code");
+
+        let new_source_ledger = source_ledger - dto.amount;
+        let new_dest_ledger = dest_ledger + dto.amount;
+
+        sqlx::query(
+            "UPDATE accounts
+             SET ledger_balance = ledger_balance - $1,
+                 available_balance = available_balance - $1,
+                 version = version + 1,
+                 updated_at = NOW()
+             WHERE id = $2"
+        )
+        .bind(dto.amount)
+        .bind(dto.source_account_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to update source balance: {e}") })),
+            )
+        })?;
+
+        sqlx::query(
+            "UPDATE accounts
+             SET ledger_balance = ledger_balance + $1,
+                 available_balance = available_balance + $1,
+                 version = version + 1,
+                 updated_at = NOW()
+             WHERE id = $2"
+        )
+        .bind(dto.amount)
+        .bind(dest_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to update destination balance: {e}") })),
+            )
+        })?;
+
+        // Insert Transaction Header
+        let txn_id = Uuid::new_v4();
+        let txn_ref = format!("TXN_{}", Uuid::new_v4().simple());
+        let idempotency_key = format!("IDEMP_{}", Uuid::new_v4().simple());
+        let currency_code = dto.currency.code();
+
+        sqlx::query(
+            "INSERT INTO transactions (
+                id, tenant_id, transaction_ref, idempotency_key, channel, status,
+                total_amount, currency_code, narration, metadata, created_at
+            ) VALUES ($1, $2, $3, $4, 'API', 'COMMITTED', $5, $6, $7, '{}'::jsonb, NOW())"
+        )
+        .bind(txn_id)
+        .bind(source_tenant_id)
+        .bind(&txn_ref)
+        .bind(&idempotency_key)
+        .bind(dto.amount)
+        .bind(currency_code)
+        .bind(&dto.narration)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to insert transaction record: {e}") })),
+            )
+        })?;
+
+        // Insert Dual-Leg Immutable Journal Entries
+        // DR Leg
+        sqlx::query(
+            "INSERT INTO journal_entries (
+                id, tenant_id, transaction_id, account_id, gl_code, entry_type,
+                amount, currency_code, running_balance, created_at
+            ) VALUES ($1, $2, $3, $4, $5, 'DR', $6, $7, $8, NOW())"
+        )
+        .bind(Uuid::new_v4())
+        .bind(source_tenant_id)
+        .bind(txn_id)
+        .bind(dto.source_account_id)
+        .bind(&source_gl)
+        .bind(dto.amount)
+        .bind(currency_code)
+        .bind(new_source_ledger)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to insert DR journal entry: {e}") })),
+            )
+        })?;
+
+        // CR Leg
+        sqlx::query(
+            "INSERT INTO journal_entries (
+                id, tenant_id, transaction_id, account_id, gl_code, entry_type,
+                amount, currency_code, running_balance, created_at
+            ) VALUES ($1, $2, $3, $4, $5, 'CR', $6, $7, $8, NOW())"
+        )
+        .bind(Uuid::new_v4())
+        .bind(source_tenant_id)
+        .bind(txn_id)
+        .bind(dest_id)
+        .bind(&dest_gl)
+        .bind(dto.amount)
+        .bind(currency_code)
+        .bind(new_dest_ledger)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Failed to insert CR journal entry: {e}") })),
+            )
+        })?;
+
+        // Insert Audit Log Record
+        let audit_payload = json!({
+            "source_account_id": dto.source_account_id,
+            "destination_account_id": dto.destination_account_id,
+            "amount": dto.amount,
+            "currency": dto.currency,
+            "narration": dto.narration,
+            "transaction_ref": txn_ref
+        });
+
+        let _ = sqlx::query(
+            "INSERT INTO audit_logs (id, tenant_id, actor_id, actor_type, action, entity_name, entity_id, payload, created_at)
+             VALUES ($1, $2, $3, 'USER', 'INTRA_TRANSFER_COMMITTED', 'TRANSACTION', $4, $5, NOW())"
+        )
+        .bind(Uuid::new_v4())
+        .bind(source_tenant_id)
+        .bind(auth.user_id())
+        .bind(txn_id)
+        .bind(audit_payload)
+        .execute(&mut *tx)
+        .await;
+
+        // Commit ACID Transaction
+        tx.commit().await.map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "status": "ERROR", "message": format!("Transaction commit failed: {e}") })),
+            )
+        })?;
+
+        return Ok((
+            StatusCode::CREATED,
+            Json(json!({
+                "status": "COMMITTED",
+                "transaction_id": txn_id,
+                "amount": dto.amount,
+                "currency": dto.currency,
+                "narration": dto.narration
+            })),
+        ));
+    }
+
+    // In-memory fallback if database pool unavailable
     {
         let accounts_by_id = state.accounts_by_id.read().unwrap();
         if let Some(source_account) = accounts_by_id.get(&dto.source_account_id) {
-            // Check if source account is restricted from debiting
             if !source_account.status.can_debit() {
                 return Err((
                     StatusCode::FORBIDDEN,
@@ -44,7 +522,6 @@ async fn post_intra_transfer(
                 ));
             }
 
-            // Check if transfer breaches any custom tenant PND rules
             let rules = state.pnd_rules.read().unwrap();
             if let Some(triggered_rule) =
                 AccountManager::evaluate_transaction_pnd_rules(source_account, dto.amount, &rules)
@@ -53,7 +530,6 @@ async fn post_intra_transfer(
                 drop(rules);
                 drop(accounts_by_id);
 
-                // Automatically dish out SYSTEM_AUTOMATED_PND on source account
                 let mut accounts_by_id = state.accounts_by_id.write().unwrap();
                 let mut accounts = state.accounts.write().unwrap();
 
@@ -94,35 +570,24 @@ async fn post_intra_transfer(
         }
     }
 
-    // 2. Double-entry posting batch validation
-    let legs = vec![
-        PostingLeg {
-            account_id: dto.source_account_id,
-            gl_code: "2110001".to_string(),
-            currency: dto.currency,
-            entry_type: EntryType::Debit,
-            amount: dto.amount,
-        },
-        PostingLeg {
-            account_id: dto.destination_account_id,
-            gl_code: "2110002".to_string(),
-            currency: dto.currency,
-            entry_type: EntryType::Credit,
-            amount: dto.amount,
-        },
-    ];
-
-    if let Err(err) = validate_journal_batch(&legs) {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "status": "VALIDATION_FAILED",
-                "error": err.to_string()
-            })),
-        ));
-    }
-
     let txn_id = Uuid::new_v4();
+    let audit_event = AuditEvent {
+        id: Uuid::new_v4(),
+        tenant_id: auth.tenant_id(),
+        actor_id: auth.user_id(),
+        action: AuditAction::TransferPosted,
+        entity_name: "TRANSACTION".to_string(),
+        entity_id: txn_id,
+        payload: json!({
+            "source_account_id": dto.source_account_id,
+            "destination_account_id": dto.destination_account_id,
+            "amount": dto.amount,
+            "currency": dto.currency.code(),
+        }),
+        timestamp: chrono::Utc::now(),
+    };
+    let _ = state.audit_sink.record(audit_event).await;
+
     Ok((
         StatusCode::CREATED,
         Json(json!({

@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AppState {
+    pub pool: Option<sqlx::PgPool>,
     pub jwt_service: Arc<JwtService>,
     pub audit_sink: Arc<MemoryAuditSink>,
     pub tenants: Arc<RwLock<HashMap<Uuid, TenantRecord>>>,
@@ -29,6 +30,23 @@ impl Default for AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        dotenvy::dotenv().ok();
+        let pool = if let Ok(database_url) = std::env::var("DATABASE_URL") {
+            sqlx::postgres::PgPoolOptions::new()
+                .max_connections(20)
+                .connect_lazy(&database_url)
+                .ok()
+        } else {
+            None
+        };
+        Self::with_pool_internal(pool)
+    }
+
+    pub fn new_with_pool(pool: sqlx::PgPool) -> Self {
+        Self::with_pool_internal(Some(pool))
+    }
+
+    fn with_pool_internal(pool: Option<sqlx::PgPool>) -> Self {
         let jwt_secret = std::env::var("JWT_SECRET")
             .unwrap_or_else(|_| "super_secret_jwt_key_change_in_production_123456".to_string());
         let jwt_service = Arc::new(JwtService::new(&jwt_secret));
@@ -37,7 +55,7 @@ impl AppState {
         let mut tenants = HashMap::new();
         let mut tenants_by_client_id = HashMap::new();
 
-        // Seed native wallet app tenant
+        // Seed native wallet app tenant baseline
         let wallet_tenant_id = Uuid::parse_str("a0000000-0000-0000-0000-000000000001").unwrap();
         let wallet_client_id = "client_wallet_app_seed001".to_string();
         let wallet_raw_secret = "sec_live_wallet_app_seed_key_2026";
@@ -55,6 +73,7 @@ impl AppState {
             allowed_ips: vec!["127.0.0.1".to_string(), "::1".to_string()],
             scopes: vec![
                 "transfers:write".to_string(),
+                "transfers:read".to_string(),
                 "accounts:read".to_string(),
                 "accounts:write".to_string(),
                 "admin:read".to_string(),
@@ -123,6 +142,7 @@ impl AppState {
         accounts_by_id.insert(acc2_id, acc2);
 
         Self {
+            pool,
             jwt_service,
             audit_sink,
             tenants: Arc::new(RwLock::new(tenants)),

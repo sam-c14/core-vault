@@ -1,10 +1,12 @@
-use cv_transaction_api::create_router;
+use cv_transaction_api::{create_router_with_state, AppState};
 use std::net::SocketAddr;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+
     // Initialize structured JSON logging
     tracing_subscriber::registry()
         .with(
@@ -16,7 +18,19 @@ async fn main() -> anyhow::Result<()> {
 
     info!("Initializing CoreVault V1 Monolith...");
 
-    let app = create_router();
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://cv_user:cv_password@localhost:5432/corevault_db".to_string()
+    });
+
+    info!("Establishing PostgreSQL database connection pool...");
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(20)
+        .connect(&database_url)
+        .await?;
+    info!("PostgreSQL connection pool established successfully");
+
+    let state = AppState::new_with_pool(pool);
+    let app = create_router_with_state(state);
 
     let port = std::env::var("PORT")
         .unwrap_or_else(|_| "8080".to_string())
