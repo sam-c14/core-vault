@@ -335,58 +335,53 @@ curl -X GET http://127.0.0.1:8080/api/v1/auth/me \
 Account lifecycle management is handled by `cv-account-manager` with check-digit validation provided by `cv-nuban-validator`.
 
 ### 3.1 Open Account
-Creates a new customer or internal account, automatically assigning a CBN-compliant 10-digit NUBAN.
+Creates a new customer or internal account, automatically assigning a CBN-compliant 10-digit NUBAN. The tenant ID is automatically determined from the authenticated session or optionally provided via the `x-tenant-id` header (not required in the request payload).
 
 - **Method:** `POST`
 - **Path:** `/api/v1/accounts`
-- **Authentication:** Optional in MVP / Bearer Token recommended
+- **Authentication:** `Bearer <token>` (`accounts:write`, `OPERATIONS_OFFICER`, or `SUPER_ADMIN`)
 
 #### Request Headers
 ```http
+Authorization: Bearer <token>
 Content-Type: application/json
+x-tenant-id: a0000000-0000-0000-0000-000000000001 (optional for non-super-admins)
 ```
 
-#### Request Body (Savings Account)
+#### Request Body
 ```json
 {
-  "customer_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "account_name": "Jane Doe Operations",
+  "gl_code": "2110001",
   "account_type": "Savings",
   "currency": "NGN",
   "bank_code": "044",
-  "serial_number": "000123",
-  "credit_limit": "0.00",
-  "interest_rate": "0.045"
+  "serial_number": 123456,
+  "overdraft_limit": "0.00"
 }
 ```
 
-#### Request Body (Current Account with Overdraft)
-```json
-{
-  "customer_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-  "account_type": "Current",
-  "currency": "NGN",
-  "bank_code": "044",
-  "serial_number": "000124",
-  "credit_limit": "500000.00",
-  "interest_rate": "0.00"
-}
-```
-
-#### Response (Success)
+#### Response (Success - 201 Created)
 - **Status:** `201 Created`
 ```json
 {
   "account": {
+    "account_name": "Jane Doe Operations",
     "account_number": "0440001237",
     "account_type": "Savings",
-    "credit_limit": "0.00",
+    "available_balance": "0.00",
     "currency": "NGN",
-    "customer_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-    "hold_balance": "0.0000",
+    "customer_id": null,
+    "gl_code": "2110001",
     "id": "8f8b1c1e-9271-4775-9c87-bb78c4371900",
-    "interest_rate": "0.045",
-    "lien_balance": "0.0000",
-    "status": "ACTIVE"
+    "ledger_balance": "0.00",
+    "lien_amount": "0.00",
+    "overdraft_limit": "0.00",
+    "pnd_reason": null,
+    "pnd_source": null,
+    "status": "ACTIVE",
+    "tenant_id": "a0000000-0000-0000-0000-000000000001",
+    "version": 0
   },
   "status": "SUCCESS"
 }
@@ -404,46 +399,65 @@ Content-Type: application/json
 #### cURL Example
 ```bash
 curl -X POST http://127.0.0.1:8080/api/v1/accounts \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
-    "customer_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "account_name": "Jane Doe Operations",
+    "gl_code": "2110001",
     "account_type": "Savings",
     "currency": "NGN",
     "bank_code": "044",
-    "serial_number": "000123",
-    "credit_limit": "0.00",
-    "interest_rate": "0.045"
+    "serial_number": 123456
   }'
 ```
 
 ---
 
 ### 3.2 Get Account by NUBAN
-Fetches account status, ledger balance, and available balance.
+Fetches account details, operating status, ledger balance, available balance, active liens, and effective available funds.
 
 - **Method:** `GET`
 - **Path:** `/api/v1/accounts/:nuban`
-- **Authentication:** Optional in MVP
+- **Authentication:** `Bearer <token>` (`accounts:read` or `SUPER_ADMIN`)
+
+> [!IMPORTANT]
+> **Strict Multi-Tenant Isolation:** Resource access is strictly scoped to the authenticated tenant. If an operator or API token from Tenant B queries an account belonging to Tenant A, CoreVault returns `404 Not Found` (`Account {nuban} not found`), completely preventing account enumeration across tenants.
 
 #### Parameters
 | Name | Type | Description |
 | :--- | :--- | :--- |
 | `nuban` | Path string | 10-digit NUBAN account number |
 
-#### Response
+#### Response (Success - 200 OK)
 - **Status:** `200 OK`
 ```json
 {
+  "account_name": "Jane Doe Operations",
   "account_number": "0440001237",
-  "available_balance": "0.0000",
-  "ledger_balance": "0.0000",
+  "available_balance": "100000.00",
+  "effective_available_funds": "100000.00",
+  "ledger_balance": "100000.00",
+  "lien_amount": "0.00",
+  "overdraft_limit": "0.00",
+  "pnd_reason": null,
+  "pnd_source": null,
   "status": "ACTIVE"
+}
+```
+
+#### Response (Cross-Tenant Access or Not Found)
+- **Status:** `404 Not Found`
+```json
+{
+  "message": "Account 0440001237 not found",
+  "status": "NOT_FOUND"
 }
 ```
 
 #### cURL Example
 ```bash
-curl -X GET http://127.0.0.1:8080/api/v1/accounts/0440001237
+curl -X GET http://127.0.0.1:8080/api/v1/accounts/0440001237 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
 ---

@@ -124,7 +124,50 @@ HAVING SUM(CASE WHEN entry_type = 'DEBIT' THEN amount ELSE -amount END) <> 0;
 
 ---
 
-## ⚡ 5. Performance & OCI Free Tier Optimization
+## 🔒 5. Multi-Tenant Isolation & Authentication Architecture
+
+CoreVault enforces strict tenant boundaries at the HTTP router, middleware, and database layers:
+
+```
+                          HTTP Request
+                               │
+               ┌───────────────┴───────────────┐
+               ▼                               ▼
+       Authorization: Basic           Authorization: Bearer <JWT>
+   (client_id:client_secret)          x-tenant-id: <tenant_uuid>
+               │                               │
+               ▼                               ▼
+   ┌───────────────────────┐       ┌───────────────────────┐
+   │  Client User Login    │       │ TenantHeader & Claims │
+   │  (Verifies Tenant &   │       │ (Validates Tenant     │
+   │  Business User Creds) │       │ Boundary Mismatch)    │
+   └───────────┬───────────┘       └───────────┬───────────┘
+               │                               │
+               ▼                               ▼
+   ┌───────────────────────────────────────────────────────────┐
+   │             Strict Multi-Tenant Scoping                   │
+   │  - GET /api/v1/accounts/:nuban (404 on cross-tenant)      │
+   │  - POST /api/v1/accounts/:nuban/* (404 on cross-tenant)   │
+   │  - POST /api/v1/transfers/* (403 on cross-tenant debits)  │
+   │  - POST /api/v1/tenants/pnd-rules (Scoped to caller)      │
+   └───────────────────────────────────────────────────────────┘
+```
+
+1. **Client IAM & Basic Auth Handshake**:
+   - Business client operators authenticate into the admin portal using their tenant client credentials (`client_id:client_secret`) passed as HTTP Basic Auth, along with business user `email` and `password` in the JSON body.
+   - Dual-level verification guarantees that the client tenant is `ACTIVE` (whitelisted) and the user belongs strictly to that tenant.
+2. **`x-tenant-id` Header Context**:
+   - The `TenantHeader` Axum extractor inspects the `x-tenant-id` header on all tenant-aware routes (`/accounts`, `/tenants/pnd-rules`, `/audit/logs`).
+   - If a non-super-admin caller supplies an `x-tenant-id` that does not match their JWT claims, CoreVault returns `403 FORBIDDEN`.
+   - Super admins can use `x-tenant-id` to transparently manage or inspect any tenant without passing tenant IDs in request bodies or URL paths.
+3. **Cross-Tenant Data Privacy & Defense-in-Depth**:
+   - Non-super-admin account queries (`GET /api/v1/accounts/:nuban`) filter strictly by `tenant_id`. Any query for another tenant's account returns `404 Not Found` rather than leaking account existence or balance information.
+   - Account control operations (`freeze`, `activate`, `pnd`, `pnd/lift`, `liens`, `liens/release`) verify tenant ownership prior to balance checks, returning `404 Not Found` on cross-tenant attempts.
+   - Transfer operations reject any attempt by a tenant to debit another tenant's account with `403 Forbidden`.
+
+---
+
+## ⚡ 6. Performance & OCI Free Tier Optimization
 
 CoreVault is specifically engineered to achieve optimal throughput on the **Oracle Cloud Infrastructure (OCI) Always Free Tier (ARM Ampere A1)**:
 

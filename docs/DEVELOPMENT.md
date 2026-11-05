@@ -158,7 +158,7 @@ Expected output:
 CoreVault maintains a multi-tier testing strategy combining Rust unit/integration tests and Newman end-to-end API test suites.
 
 ### 5.1 Rust Workspace Tests
-Run all 33+ unit and integration tests across every workspace crate:
+Run all 53+ unit and integration tests across every workspace crate:
 ```bash
 cargo test --workspace
 ```
@@ -166,6 +166,11 @@ cargo test --workspace
 Run tests with full output:
 ```bash
 cargo test --workspace -- --nocapture
+```
+
+Run dedicated multi-tenant isolation and client login tests:
+```bash
+cargo test -p cv-transaction-api --test tenant_header_and_isolation_test -- --nocapture
 ```
 
 ### 5.2 Strict Linting (Clippy)

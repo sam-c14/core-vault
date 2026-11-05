@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/rust-1.81%2B-orange.svg)](https://www.rust-lang.org)
 [![PostgreSQL](https://img.shields.io/badge/postgresql-16-blue.svg)](https://www.postgresql.org)
 [![Valkey](https://img.shields.io/badge/valkey-7.2-purple.svg)](https://valkey.io)
-[![Tests](https://img.shields.io/badge/tests-33%20passed-success.svg)](docs/DEVELOPMENT.md)
+[![Tests](https://img.shields.io/badge/tests-53%20passed-success.svg)](docs/DEVELOPMENT.md)
 [![Newman API](https://img.shields.io/badge/newman%20tests-21%2F21%20passed-success.svg)](postman/README.md)
 [![Security Audit](https://img.shields.io/badge/security%20audit-passed%20(CV--SEC--001%20patched)-brightgreen.svg)](docs/SECURITY_AUDIT.md)
 
@@ -28,6 +28,8 @@ CoreVault strictly divides generic, verifiable banking primitives from commercia
 │  - Financial Hold & Lien Management                                    │
 │  - Declarative Multi-Country Platformization TOML Engine               │
 │  - Staff IAM & Argon2id Password Hashing with JWT Tokens               │
+│  - Dual Client Login (HTTP Basic Auth + Business Credentials)         │
+│  - Multi-Tenant Isolation & x-tenant-id Header Context Routing        │
 │  - Pluggable Payment Gateway Router (cv-payment-gateway)               │
 │  - Anchor BaaS Rail Adapter for SMEs & Fintechs (cv-rail-anchor)       │
 │  - Tamper-Evident Chronological Audit Logging Sink                     │
@@ -72,6 +74,7 @@ CoreVault equips autonomous AI agents and human contributors with specialized sk
 | Skill | Invocation | Purpose & Guardrails |
 | :--- | :--- | :--- |
 | [**`commit-code`**](.agent/skills/commit-code/SKILL.md) | `/commit-code` | Consistent Conventional Commits pattern for closing out milestones referenced in [`EXECUTION.md`](EXECUTION.md). Enforces clean working trees, zero secrets, and pre-commit test gates. |
+| [**`cba-integration`**](.agent/skills/cba-integration/SKILL.md) | `/cba-integration` | Consumer integration guide for CoreVault CBA — M2M client credentials, Basic Auth client login, `x-tenant-id` header scoping, and Open Core vs. Enterprise feature tiers. |
 | [**`banking-invariants`**](.agent/skills/banking-invariants/SKILL.md) | `/banking-invariants` | Audits code for non-negotiable financial invariants: zero floating point (`f32`/`f64` prohibition), double-entry balance equality, parameterized SQL, and account debit permissions. |
 | [**`verify-cba`**](.agent/skills/verify-cba/SKILL.md) | `/verify-cba` | Executes the complete verification pipeline: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --workspace` (33 tests), and Newman CLI API test runs. |
 | [**`security-audit`**](.agent/skills/security-audit/SKILL.md) | `/security-audit` | Runs automated security regression tests: Argon2id timing resistance, JWT tamper resistance, NUBAN check-digit tampering prevention (CV-SEC-001), and secrets scanning. |
