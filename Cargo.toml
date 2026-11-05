@@ -16,6 +16,8 @@ members = [
     "crates/cv-platform-config-parser",
     "crates/cv-audit",
     "crates/cv-auth",
+    "crates/cv-rail-anchor",
+    "crates/cv-payment-gateway",
     "crates/cv-transaction-api",
 ]
 resolver = "2"
@@ -29,6 +31,8 @@ cv-account-manager = { path = "crates/cv-account-manager" }
 cv-platform-config-parser = { path = "crates/cv-platform-config-parser" }
 cv-audit = { path = "crates/cv-audit" }
 cv-auth = { path = "crates/cv-auth" }
+cv-rail-anchor = { path = "crates/cv-rail-anchor" }
+cv-payment-gateway = { path = "crates/cv-payment-gateway" }
 cv-transaction-api = { path = "crates/cv-transaction-api" }
 
 # Web & Async Runtime

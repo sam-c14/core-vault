@@ -1,0 +1,23 @@
+[package]
+name = "cv-payment-gateway"
+version = "0.1.0"
+edition = "2021"
+authors = ["CoreVault Contributors"]
+license = "Apache-2.0 OR MIT"
+description = "Agnostic payment gateway router supporting pluggable adapters with Anchor BaaS default"
+
+[dependencies]
+cv-types = { workspace = true }
+cv-rail-anchor = { workspace = true }
+rust_decimal = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+rust_decimal_macros = { workspace = true }

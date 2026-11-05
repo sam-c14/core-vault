@@ -28,12 +28,12 @@ CoreVault strictly divides generic, verifiable banking primitives from commercia
 │  - Financial Hold & Lien Management                                    │
 │  - Declarative Multi-Country Platformization TOML Engine               │
 │  - Staff IAM & Argon2id Password Hashing with JWT Tokens               │
+│  - Pluggable Payment Gateway Router (cv-payment-gateway)               │
+│  - Anchor BaaS Rail Adapter for SMEs & Fintechs (cv-rail-anchor)       │
 │  - Tamper-Evident Chronological Audit Logging Sink                     │
 │  - High-Throughput Axum HTTP REST Monolith Router                      │
 ├────────────────────────────────────────────────────────────────────────┤
 │  ENTERPRISE LAYER (cba-enterprise) — Closed-Source / Proprietary       │
-│  - Agnostic Multi-Rail Payment Gateway (cv-payment-gateway)            │
-│  - Anchor BaaS Rail Adapter for SMEs (cv-rail-anchor / getanchor.co)   │
 │  - NIBSS NIP Direct Payment Switch Adapter (cv-rail-nip / ISO-8583)    │
 │  - 15-30s Cancellable Transfer Delay Queue (cv-undo-transfer)          │
 │  - Trustless P2P Escrow Engine with OTP Handshakes (cv-escrow-p2p)     │
@@ -43,7 +43,7 @@ CoreVault strictly divides generic, verifiable banking primitives from commercia
 ```
 
 The extension boundary between the public core and private enterprise crates is governed by standard Rust traits defined in `cv-types`:
-* [`PaymentRailAdapter`](crates/cv-types/src/traits.rs): Generic outward and inward inter-bank payment rail protocol.
+* [`PaymentRailAdapter`](crates/cv-types/src/traits.rs): Generic outward and inward inter-bank payment rail protocol. Supported out-of-the-box via Anchor BaaS; direct NIBSS NIP switch provided via `cba-enterprise`.
 * [`ComplianceReporter`](crates/cv-types/src/traits.rs): Transaction threshold screening and regulatory export interface.
 
 ---
@@ -59,6 +59,8 @@ The extension boundary between the public core and private enterprise crates is 
 | [`crates/cv-platform-config-parser`](crates/cv-platform-config-parser) | Declarative TOML parser for multi-country platformization (e.g. `NG.toml`, `GB.toml`). | Zero-recompilation country profile loading. |
 | [`crates/cv-audit`](crates/cv-audit) | Append-only audit logging traits and in-memory/persistent sinks. | Chronological tamper-evident audit trail. |
 | [`crates/cv-auth`](crates/cv-auth) | Staff authentication, Argon2id password hashing, and JWT token management. | Constant-time password verification & 256-bit entropy. |
+| [`crates/cv-rail-anchor`](crates/cv-rail-anchor) | Anchor Banking-as-a-Service ([getanchor.co](https://getanchor.co)) NIP adapter with Name Enquiry & Transfers. | Default SME payment rail without requiring direct NIBSS banking license. |
+| [`crates/cv-payment-gateway`](crates/cv-payment-gateway) | Agnostic multi-rail router with dynamic adapter registration and Anchor default. | Pluggable outward payment rail abstraction. |
 | [`crates/cv-transaction-api`](crates/cv-transaction-api) | Axum REST router, controllers, error mappers, and Valkey idempotency guards. | At-most-once execution via `Idempotency-Key`. |
 
 ---

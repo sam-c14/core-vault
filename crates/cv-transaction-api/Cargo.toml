@@ -13,6 +13,8 @@ cv-nuban-validator = { workspace = true }
 cv-audit = { workspace = true }
 cv-auth = { workspace = true }
 cv-platform-config-parser = { workspace = true }
+cv-rail-anchor = { workspace = true }
+cv-payment-gateway = { workspace = true }
 
 
 axum = { workspace = true }

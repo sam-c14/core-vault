@@ -54,6 +54,9 @@ All features below are available in the public repository with no additional lic
 | Lien placement | `POST /api/v1/accounts/:nuban/liens` |
 | Lien release | `POST /api/v1/accounts/:nuban/liens/release` |
 | Intra-bank (on-us) double-entry transfer | `POST /api/v1/transfers/intra` |
+| Inter-bank name enquiry (Anchor default / pluggable) | `POST /api/v1/transfers/enquiry` |
+| Outward inter-bank transfer (Anchor BaaS default) | `POST /api/v1/transfers/outward` |
+| Pluggable payment rails inspection & switching | `GET /api/v1/payment-rails`, `POST /api/v1/admin/payment-rails/active` |
 | Automated tenant PND rules engine | `POST /api/v1/tenants/pnd-rules`, `GET /api/v1/tenants/:id/pnd-rules` |
 | Tenant onboarding & whitelist/blacklist | `POST /api/v1/admin/tenants`, `POST /api/v1/admin/tenants/:id/whitelist` |
 | Immutable SHA-256 audit trail | `GET /api/v1/audit/logs` |
@@ -64,20 +67,17 @@ All features below are available in the public repository with no additional lic
 
 ### Enterprise Tier (Private Crates / Higher Subscription)
 
-The following capabilities are defined as **extension traits** in `cv-types/src/traits.rs` within the public codebase but are **not implemented** in the public repo. Their concrete implementations live in private crates that require a commercial subscription or enterprise access agreement.
+The following capabilities are provided in `cba-enterprise`. Public Core ships with the pluggable `PaymentGateway` and `AnchorRailAdapter` by default; direct NIBSS integration and regulatory compliance engines live in `cba-enterprise`.
 
-> **Confirmation:** No tier-gating middleware or subscription check exists in the public codebase. The architecture uses Rust traits (`PaymentRailAdapter`, `ComplianceReporter`) as compile-time extension points. Enterprise features are provided by swapping in private crate implementations of these traits. The public core ships with stub/mock adapters.
+> **Confirmation:** CoreVault Open Core allows registering any adapter implementing `PaymentRailAdapter`. Direct NIBSS Instant Payments switch (`cv-rail-nip`) is exclusive to `cba-enterprise` for licensed commercial banks requiring 30-digit session IDs and ISO-8583 banking protocols.
 
 | Feature | Trait / Extension Point | Notes |
 |---|---|---|
-| Inter-bank outward transfers (NIBSS NIP) | `PaymentRailAdapter::dispatch_outward` | ISO-8583 bridge to NIBSS switching network |
-| Name enquiry (NIP pre-transfer validation) | `PaymentRailAdapter::name_enquiry` | Required before any inter-bank transfer |
-| Anchor/SME outward payment rail | `PaymentRailAdapter` (alternate impl) | For fintechs using Anchor as their outward rail |
-| Valkey undo-delay queue (5-min recall) | Internal enterprise queue | Allows reversal window before NIP settlement |
-| CBN/NFIU regulatory compliance reporting | `ComplianceReporter::evaluate_transaction` | AML screening, SUSPICIOUS_TRANSFER flagging |
-| Cross-border / FX settlement rails | `PaymentRailAdapter` (FX impl) | Multi-currency outward routing |
-| Advanced AML rule types | `ComplianceReporter` | Beyond the open-core `KYC_TIER_LIMIT` / `DAILY_DEBIT_CAP` |
-| Multi-jurisdictional platform profiles | Additional TOML profiles + private parser | Beyond NG and GB included in public repo |
+| Direct NIBSS NIP Switch | `NipRailAdapter` (`cv-rail-nip`) | Direct ISO-8583 bridge to NIBSS switching network (30-digit session ID) |
+| Valkey undo-delay queue (15-30s recall) | `cv-undo-transfer` | Cancellable outbox window before NIP settlement |
+| CBN/NFIU regulatory compliance reporting | `ComplianceReporter` (`cv-compliance-reporting`) | AML screening, CTR threshold checks, goAML XML export |
+| P2P Escrow & Milestone Engine | `cv-escrow-p2p` | Buyer/seller escrow contracts with OTP release |
+| AI Transaction Intelligence & Categorization | `cv-smart-tagging` | Merchant taxonomy, runway calculation, MCC categorization |
 
 To activate enterprise features, contact CoreVault for a commercial license. You will receive a private crates registry endpoint and credentials to add to your `Cargo.toml`.
 

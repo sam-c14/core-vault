@@ -2,6 +2,7 @@ use chrono::Utc;
 use cv_account_manager::AccountRecord;
 use cv_audit::MemoryAuditSink;
 use cv_auth::{hash_password, JwtService};
+use cv_payment_gateway::PaymentGateway;
 use cv_types::{
     AccountId, AccountStatus, AccountType, Currency, TenantPndRule, TenantRecord, TenantStatus,
 };
@@ -20,6 +21,7 @@ pub struct AppState {
     pub accounts: Arc<RwLock<HashMap<String, AccountRecord>>>, // Keyed by NUBAN
     pub accounts_by_id: Arc<RwLock<HashMap<Uuid, AccountRecord>>>, // Keyed by Account UUID
     pub pnd_rules: Arc<RwLock<Vec<TenantPndRule>>>,
+    pub payment_gateway: Arc<PaymentGateway>,
 }
 
 impl Default for AppState {
@@ -141,6 +143,8 @@ impl AppState {
         accounts_by_id.insert(acc1_id, acc1);
         accounts_by_id.insert(acc2_id, acc2);
 
+        let payment_gateway = Arc::new(PaymentGateway::anchor_default());
+
         Self {
             pool,
             jwt_service,
@@ -150,6 +154,7 @@ impl AppState {
             accounts: Arc::new(RwLock::new(accounts)),
             accounts_by_id: Arc::new(RwLock::new(accounts_by_id)),
             pnd_rules: Arc::new(RwLock::new(Vec::new())),
+            payment_gateway,
         }
     }
 }
