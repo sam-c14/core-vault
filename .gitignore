@@ -20,6 +20,10 @@ pgdata/
 caddy_data/
 caddy_config/
 
+# Local access credentials documentation (untracked)
+docs/ACCESS_CREDENTIALS.md
+docs/*credentials*.md
+
 # OS metadata
 .DS_Store
 Thumbs.db
