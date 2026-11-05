@@ -1,7 +1,13 @@
-use axum::http::StatusCode;
+use axum::{
+    body::Body,
+    http::{header, Method, Request, StatusCode},
+};
 use cv_auth::JwtService;
+use cv_payment_gateway::{PaymentGateway, PaymentRailProvider};
 use cv_transaction_api::create_router;
+use cv_types::traits::{AccountEnquiry, OutwardTransfer, PaymentRailAdapter, TransferReceipt};
 use http_body_util::BodyExt;
+use rust_decimal_macros::dec;
 use serde_json::{json, Value};
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -22,12 +28,12 @@ async fn test_payment_rails_enquiry_and_outward_dispatch() {
     let app = create_router();
     let token = generate_test_admin_token();
 
-    // 1. Inspect Payment Rails
-    let rails_req = axum::http::Request::builder()
-        .method("GET")
+    // 1. Inspect Payment Rails via HTTP
+    let rails_req = Request::builder()
+        .method(Method::GET)
         .uri("/api/v1/payment-rails")
-        .header("Authorization", format!("Bearer {}", token))
-        .body(axum::body::Body::empty())
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
         .unwrap();
 
     let rails_res = app.clone().oneshot(rails_req).await.unwrap();
@@ -43,14 +49,12 @@ async fn test_payment_rails_enquiry_and_outward_dispatch() {
         "account_number": "0440001237"
     });
 
-    let enquiry_req = axum::http::Request::builder()
-        .method("POST")
+    let enquiry_req = Request::builder()
+        .method(Method::POST)
         .uri("/api/v1/transfers/enquiry")
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&enquiry_payload).unwrap(),
-        ))
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&enquiry_payload).unwrap()))
         .unwrap();
 
     let enquiry_res = app.clone().oneshot(enquiry_req).await.unwrap();
@@ -74,14 +78,12 @@ async fn test_payment_rails_enquiry_and_outward_dispatch() {
         "narration": "Logistics outward payment via Anchor"
     });
 
-    let outward_req = axum::http::Request::builder()
-        .method("POST")
+    let outward_req = Request::builder()
+        .method(Method::POST)
         .uri("/api/v1/transfers/outward")
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&outward_payload).unwrap(),
-        ))
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&outward_payload).unwrap()))
         .unwrap();
 
     let outward_res = app.clone().oneshot(outward_req).await.unwrap();
@@ -96,14 +98,12 @@ async fn test_payment_rails_enquiry_and_outward_dispatch() {
 
     // 4. Attempt to switch to direct NIBSS without enterprise crate -> returns 400
     let switch_payload = json!({ "provider": "NibssDirect" });
-    let switch_req = axum::http::Request::builder()
-        .method("POST")
+    let switch_req = Request::builder()
+        .method(Method::POST)
         .uri("/api/v1/admin/payment-rails/active")
-        .header("Authorization", format!("Bearer {}", token))
-        .header("Content-Type", "application/json")
-        .body(axum::body::Body::from(
-            serde_json::to_vec(&switch_payload).unwrap(),
-        ))
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&switch_payload).unwrap()))
         .unwrap();
 
     let switch_res = app.clone().oneshot(switch_req).await.unwrap();
@@ -113,4 +113,28 @@ async fn test_payment_rails_enquiry_and_outward_dispatch() {
     assert_eq!(switch_json["status"], "SWITCH_FAILED");
     let err_msg = switch_json["error"].as_str().unwrap();
     assert!(err_msg.contains("requires cba-enterprise cv-rail-nip"));
+}
+
+#[tokio::test]
+async fn test_direct_payment_gateway_unit_methods() {
+    let gateway = PaymentGateway::anchor_default();
+    assert_eq!(gateway.active_provider(), PaymentRailProvider::Anchor);
+
+    // Name enquiry directly on gateway
+    let enquiry: AccountEnquiry = gateway.name_enquiry("044", "0440001237").await.unwrap();
+    assert_eq!(enquiry.account_name, "COREVAULT RETAIL CUSTOMER");
+
+    // Outward transfer directly on gateway
+    let transfer = OutwardTransfer {
+        transaction_ref: "REF-UNIT-001".to_string(),
+        source_account: "0440001237".to_string(),
+        destination_account: "0440001230".to_string(),
+        destination_bank_code: "044".to_string(),
+        amount: dec!(25000.00),
+        narration: "Direct unit test".to_string(),
+    };
+
+    let receipt: TransferReceipt = gateway.dispatch_outward(&transfer).await.unwrap();
+    assert_eq!(receipt.response_code, "00");
+    assert!(receipt.session_id.starts_with("tra_"));
 }
