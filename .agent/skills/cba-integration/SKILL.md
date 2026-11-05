@@ -113,17 +113,32 @@ Authorization: Bearer eyJ...
 
 > **Important:** Your tenant must be in `ACTIVE` (whitelisted) status. A `403 Forbidden` response means the tenant has been blacklisted or is pending activation.
 
-### Staff Login (Admin Portal)
+### Staff Login (Internal Super Admin)
 
 ```http
 POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@example.com",
+  "email": "admin@corevault.bank",
   "password": "your-password"
 }
 ```
+
+### Client User Login (Admin Portal for Tenants)
+
+```http
+POST /api/v1/auth/client-login
+Authorization: Basic <base64(client_id:client_secret)>
+Content-Type: application/json
+
+{
+  "email": "ops@tenant.com",
+  "password": "your-password"
+}
+```
+
+> **Note:** Client users can also log in via `POST /api/v1/auth/login` by including the `Authorization: Basic ...` header with their tenant credentials. Tenant identification across endpoints is passed via the `x-tenant-id` HTTP header. Client-facing endpoints are strictly isolated: accounts, controls, and transfers cannot be accessed or manipulated across tenant boundaries.
 
 ---
 

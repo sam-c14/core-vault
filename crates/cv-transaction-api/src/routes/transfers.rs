@@ -192,6 +192,16 @@ async fn post_intra_transfer(
         let source_tenant_id: Uuid = source_row.get("tenant_id");
         let source_nuban: String = source_row.get("account_number");
 
+        if auth.role() != "SUPER_ADMIN" && source_tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "FORBIDDEN",
+                    "message": "Source account does not belong to authenticated tenant"
+                })),
+            ));
+        }
+
         let source_status = match source_status_str.as_str() {
             "ACTIVE" => AccountStatus::Active,
             "POST_NO_DEBIT" => AccountStatus::PostNoDebit,
@@ -542,6 +552,16 @@ async fn post_intra_transfer(
     {
         let accounts_by_id = state.accounts_by_id.read().unwrap();
         if let Some(source_account) = accounts_by_id.get(&dto.source_account_id) {
+            if auth.role() != "SUPER_ADMIN" && source_account.tenant_id != auth.tenant_id() {
+                return Err((
+                    StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "status": "FORBIDDEN",
+                        "message": "Source account does not belong to authenticated tenant"
+                    })),
+                ));
+            }
+
             if !source_account.status.can_debit() {
                 return Err((
                     StatusCode::FORBIDDEN,
@@ -770,6 +790,17 @@ async fn post_outward_transfer(
             }
         };
 
+        let src_tenant_id: Uuid = src.get("tenant_id");
+        if auth.role() != "SUPER_ADMIN" && src_tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(json!({
+                    "status": "FORBIDDEN",
+                    "message": "Source account does not belong to authenticated tenant"
+                })),
+            ));
+        }
+
         let src_status: String = src.get("status");
         if src_status == "FROZEN" || src_status == "POST_NO_DEBIT" {
             return Err((
@@ -887,6 +918,21 @@ async fn post_outward_transfer(
     }
 
     // In-memory fallback
+    {
+        let accounts = state.accounts_by_id.read().unwrap();
+        if let Some(src) = accounts.get(&dto.source_account_id) {
+            if auth.role() != "SUPER_ADMIN" && src.tenant_id != auth.tenant_id() {
+                return Err((
+                    StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "status": "FORBIDDEN",
+                        "message": "Source account does not belong to authenticated tenant"
+                    })),
+                ));
+            }
+        }
+    }
+
     let outward_req = OutwardTransfer {
         transaction_ref: txn_ref.clone(),
         source_account: "0581111111".to_string(),

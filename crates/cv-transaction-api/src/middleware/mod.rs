@@ -1,5 +1,5 @@
 pub mod auth;
 pub mod idempotency;
 
-pub use auth::AuthClaims;
+pub use auth::{AuthClaims, TenantHeader};
 pub use idempotency::IdempotencyStore;

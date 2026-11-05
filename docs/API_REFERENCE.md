@@ -32,7 +32,8 @@ http://127.0.0.1:8080
 | Header | Description | Required | Example |
 | :--- | :--- | :--- | :--- |
 | `Content-Type` | Payload format | Yes for POST/PUT | `application/json` |
-| `Authorization` | Bearer JWT token | For authenticated routes | `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
+| `Authorization` | Bearer JWT or Basic Auth | For authenticated routes | `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...` or `Basic Y2xpZW50X2lkOnNlY3JldA==` |
+| `x-tenant-id` | Tenant context UUID for tenant-scoped operations | Optional for non-super-admins (defaults to token tenant); can be specified by Super Admin | `a0000000-0000-0000-0000-000000000001` |
 | `Idempotency-Key`| Unique UUID to guarantee at-most-once execution | For state-mutating requests | `8e3a2b40-97c2-40f0-8c2f-e771c99f1234` |
 
 ---
@@ -150,9 +151,65 @@ curl -X POST http://127.0.0.1:8080/api/v1/auth/login \
 
 ---
 
+### 2.2 Client User Login (Basic Auth + Business Credentials)
+Authenticates a tenant's business operator into the admin portal using tenant client credentials via HTTP Basic Auth (`Authorization: Basic base64(client_id:client_secret)`) and business user `email` and `password` in JSON body.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/auth/client-login` (or `/api/v1/auth/login` with `Authorization: Basic ...`)
+- **Authentication:** HTTP Basic Auth (`client_id:client_secret`)
+
+#### Request Headers
+```http
+Authorization: Basic <base64(client_id:client_secret)>
+Content-Type: application/json
+```
+
+#### Request Body
+```json
+{
+  "email": "ops@tenant.com",
+  "password": "BusinessPassword123!"
+}
+```
+
+#### Response (Success - 200 OK)
+- **Status:** `200 OK`
+```json
+{
+  "expires_in_seconds": 900,
+  "status": "SUCCESS",
+  "tenant_id": "a0000000-0000-0000-0000-000000000001",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "Bearer",
+  "user": {
+    "email": "ops@tenant.com",
+    "id": "e85e4922-b5e1-456c-829d-40e947721111",
+    "role": "OPERATIONS_OFFICER",
+    "tenant_id": "a0000000-0000-0000-0000-000000000001"
+  }
+}
+```
+
+#### Response (Failure - 401 Unauthorized: Invalid Client Credentials or Password)
+- **Status:** `401 Unauthorized`
+```json
+{
+  "message": "Invalid email or password for this business tenant",
+  "status": "UNAUTHORIZED"
+}
+```
+
+#### cURL Example
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/auth/client-login \
+  -H "Authorization: Basic Y2xpZW50X3dhbGxldF9hcHBfc2VlZDAwMTpzZWNfbGl2ZV93YWxsZXRfYXBwX3NlZWRfa2V5XzIwMjY=" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ops@tenant.com", "password": "BusinessPassword123!"}'
+```
+
 ---
 
-### 2.2 Issue M2M Client Token (client_credentials)
+### 2.3 Issue M2M Client Token (client_credentials)
 Authenticates an external tenant machine-to-machine service using `client_id` and raw `client_secret`, returning a scoped Bearer JWT token valid for 1 hour.
 
 - **Method:** `POST`
@@ -1179,16 +1236,22 @@ curl -X POST http://127.0.0.1:8080/api/v1/admin/tenants/a0000000-0000-0000-0000-
 Allows individual tenants to configure automated compliance, AML, and risk thresholds (e.g. KYC single caps, daily velocity) that autonomously dish out system Post-No-Debits on breaching customer accounts.
 
 ### 9.1 Register Tenant Custom Compliance PND Rule
-Registers a custom PND rule for a specific tenant instance.
+Registers a custom PND rule for a specific tenant instance. Tenant ID is resolved from the caller's JWT or `x-tenant-id` header (not required in JSON payload).
 
 - **Method:** `POST`
 - **Path:** `/api/v1/tenants/pnd-rules`
-- **Authentication:** Tenant Admin (`Bearer <token>`)
+- **Authentication:** Tenant Admin / Operator (`Bearer <token>`)
+
+#### Request Headers
+```http
+Authorization: Bearer <token>
+Content-Type: application/json
+x-tenant-id: a0000000-0000-0000-0000-000000000001 (optional for non-super-admins)
+```
 
 #### Request Body
 ```json
 {
-  "tenant_id": "a0000000-0000-0000-0000-000000000001",
   "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
   "rule_type": "KYC_TIER_LIMIT",
   "max_single_amount": "50000.00",
@@ -1229,8 +1292,8 @@ Registers a custom PND rule for a specific tenant instance.
 curl -X POST http://127.0.0.1:8080/api/v1/tenants/pnd-rules \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "x-tenant-id: a0000000-0000-0000-0000-000000000001" \
   -d '{
-    "tenant_id": "a0000000-0000-0000-0000-000000000001",
     "rule_name": "KYC_TIER_1_SINGLE_TRANSFER_CAP",
     "rule_type": "KYC_TIER_LIMIT",
     "max_single_amount": "50000.00",
@@ -1241,11 +1304,17 @@ curl -X POST http://127.0.0.1:8080/api/v1/tenants/pnd-rules \
 ---
 
 ### 9.2 List Active PND Rules for Tenant
-Fetches all custom PND compliance rules configured for the given tenant.
+Fetches all custom PND compliance rules configured for the authenticated tenant (resolved via JWT or `x-tenant-id` header). Path parameter `/api/v1/tenants/:tenant_id/pnd-rules` is also supported for backwards compatibility.
 
 - **Method:** `GET`
-- **Path:** `/api/v1/tenants/:tenant_id/pnd-rules`
-- **Authentication:** Tenant Admin (`Bearer <token>`)
+- **Path:** `/api/v1/tenants/pnd-rules` (or `/api/v1/tenants/:tenant_id/pnd-rules`)
+- **Authentication:** Tenant Admin / Operator (`Bearer <token>`)
+
+#### Request Headers
+```http
+Authorization: Bearer <token>
+x-tenant-id: a0000000-0000-0000-0000-000000000001 (optional for non-super-admins)
+```
 
 #### Response (Success - 200 OK)
 - **Status:** `200 OK`
@@ -1269,7 +1338,7 @@ Fetches all custom PND compliance rules configured for the given tenant.
 
 #### cURL Example
 ```bash
-curl -X GET http://127.0.0.1:8080/api/v1/tenants/a0000000-0000-0000-0000-000000000001/pnd-rules \
+curl -X GET http://127.0.0.1:8080/api/v1/tenants/pnd-rules \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 

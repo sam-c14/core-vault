@@ -1,4 +1,4 @@
-use crate::middleware::AuthClaims;
+use crate::middleware::{AuthClaims, TenantHeader};
 use crate::state::AppState;
 use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 use chrono::Utc;
@@ -14,6 +14,7 @@ pub fn router(state: AppState) -> Router {
 
 async fn get_audit_logs(
     auth: AuthClaims,
+    tenant_hdr: TenantHeader,
     State(state): State<AppState>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
     auth.require_scope_or_role(
@@ -21,19 +22,14 @@ async fn get_audit_logs(
         &["SUPER_ADMIN", "AUDITOR", "COMPLIANCE_OFFICER"],
     )?;
 
+    let target_tenant = if auth.role() == "SUPER_ADMIN" {
+        tenant_hdr.id()
+    } else {
+        Some(tenant_hdr.resolve_for(&auth)?)
+    };
+
     if let Some(pool) = &state.pool {
-        let is_super_admin = auth.role() == "SUPER_ADMIN";
-        let rows = if is_super_admin {
-            sqlx::query(
-                "SELECT id, tenant_id, actor_id, actor_type, action, entity_name, entity_id,
-                        before_state, after_state, ip_address, trace_id, payload, created_at
-                 FROM audit_logs
-                 ORDER BY created_at DESC
-                 LIMIT 100",
-            )
-            .fetch_all(pool)
-            .await
-        } else {
+        let rows = if let Some(tid) = target_tenant {
             sqlx::query(
                 "SELECT id, tenant_id, actor_id, actor_type, action, entity_name, entity_id,
                         before_state, after_state, ip_address, trace_id, payload, created_at
@@ -42,7 +38,17 @@ async fn get_audit_logs(
                  ORDER BY created_at DESC
                  LIMIT 100",
             )
-            .bind(auth.tenant_id())
+            .bind(tid)
+            .fetch_all(pool)
+            .await
+        } else {
+            sqlx::query(
+                "SELECT id, tenant_id, actor_id, actor_type, action, entity_name, entity_id,
+                        before_state, after_state, ip_address, trace_id, payload, created_at
+                 FROM audit_logs
+                 ORDER BY created_at DESC
+                 LIMIT 100",
+            )
             .fetch_all(pool)
             .await
         }

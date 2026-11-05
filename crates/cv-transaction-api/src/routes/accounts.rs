@@ -1,4 +1,4 @@
-use crate::middleware::AuthClaims;
+use crate::middleware::{AuthClaims, TenantHeader};
 use crate::state::AppState;
 use axum::{
     extract::{Path, State},
@@ -22,6 +22,7 @@ pub fn router(state: AppState) -> Router {
 
 async fn list_accounts(
     auth: AuthClaims,
+    tenant_hdr: TenantHeader,
     State(state): State<AppState>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
     auth.require_scope_or_role(
@@ -35,19 +36,14 @@ async fn list_accounts(
         ],
     )?;
 
+    let target_tenant = if auth.role() == "SUPER_ADMIN" {
+        tenant_hdr.id()
+    } else {
+        Some(tenant_hdr.resolve_for(&auth)?)
+    };
+
     if let Some(pool) = &state.pool {
-        let is_super_admin = auth.role() == "SUPER_ADMIN";
-        let rows = if is_super_admin {
-            sqlx::query(
-                "SELECT id, tenant_id, customer_id, account_number, account_name, gl_code, account_type,
-                        currency_code, ledger_balance, available_balance, lien_amount, overdraft_limit,
-                        status, pnd_source, pnd_reason, version, created_at, updated_at
-                 FROM accounts
-                 ORDER BY created_at DESC"
-            )
-            .fetch_all(pool)
-            .await
-        } else {
+        let rows = if let Some(tid) = target_tenant {
             sqlx::query(
                 "SELECT id, tenant_id, customer_id, account_number, account_name, gl_code, account_type,
                         currency_code, ledger_balance, available_balance, lien_amount, overdraft_limit,
@@ -56,7 +52,17 @@ async fn list_accounts(
                  WHERE tenant_id = $1
                  ORDER BY created_at DESC"
             )
-            .bind(auth.tenant_id())
+            .bind(tid)
+            .fetch_all(pool)
+            .await
+        } else {
+            sqlx::query(
+                "SELECT id, tenant_id, customer_id, account_number, account_name, gl_code, account_type,
+                        currency_code, ledger_balance, available_balance, lien_amount, overdraft_limit,
+                        status, pnd_source, pnd_reason, version, created_at, updated_at
+                 FROM accounts
+                 ORDER BY created_at DESC"
+            )
             .fetch_all(pool)
             .await
         }
@@ -101,7 +107,15 @@ async fn list_accounts(
     }
 
     let accounts = state.accounts.read().unwrap();
-    let list: Vec<_> = accounts.values().cloned().collect();
+    let list: Vec<_> = if let Some(tid) = target_tenant {
+        accounts
+            .values()
+            .filter(|a| a.tenant_id == tid)
+            .cloned()
+            .collect()
+    } else {
+        accounts.values().cloned().collect()
+    };
     Ok((
         StatusCode::OK,
         Json(json!({
@@ -113,20 +127,31 @@ async fn list_accounts(
 
 async fn create_account(
     auth: AuthClaims,
+    tenant_hdr: TenantHeader,
     State(state): State<AppState>,
     Json(dto): Json<CreateAccountDto>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
     auth.require_scope_or_role("accounts:write", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
 
-    let account = AccountManager::build_new_account(dto).map_err(|err| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(json!({
-                "status": "ERROR",
-                "message": err.to_string()
-            })),
-        )
-    })?;
+    let effective_tenant_id = if auth.role() == "SUPER_ADMIN" {
+        tenant_hdr
+            .id()
+            .or(dto.tenant_id)
+            .unwrap_or(auth.tenant_id())
+    } else {
+        tenant_hdr.resolve_for(&auth)?
+    };
+
+    let account =
+        AccountManager::build_new_account_with_tenant(dto, effective_tenant_id).map_err(|err| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "status": "ERROR",
+                    "message": err.to_string()
+                })),
+            )
+        })?;
 
     if let Some(pool) = &state.pool {
         let mut tx = pool.begin().await.map_err(|e| {
@@ -275,6 +300,16 @@ async fn get_account(
             }
         };
 
+        let row_tenant_id: Uuid = r.get("tenant_id");
+        if auth.role() != "SUPER_ADMIN" && row_tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         let ledger: Decimal = r.get("ledger_balance");
         let available: Decimal = r.get("available_balance");
         let overdraft: Decimal = r.get("overdraft_limit");
@@ -300,6 +335,16 @@ async fn get_account(
 
     let accounts = state.accounts.read().unwrap();
     if let Some(acc) = accounts.get(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(json!({
+                    "status": "NOT_FOUND",
+                    "message": format!("Account {nuban} not found")
+                })),
+            ));
+        }
+
         Ok((
             StatusCode::OK,
             Json(json!({

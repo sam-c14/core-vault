@@ -89,6 +89,24 @@ async fn freeze_account(
         let account_id: Uuid = row.get("id");
         let tenant_id: Uuid = row.get("tenant_id");
 
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         sqlx::query(
             "UPDATE accounts SET status = 'FROZEN', updated_at = NOW() WHERE account_number = $1",
         )
@@ -158,6 +176,14 @@ async fn freeze_account(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     let prev_status = if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
         let prev = acc.status;
         acc.status = AccountStatus::Frozen;
         if let Some(by_id) = accounts_by_id.get_mut(&acc.id.0) {
@@ -232,6 +258,24 @@ async fn place_pnd(
         let prev_status: String = row.get("status");
         let account_id: Uuid = row.get("id");
         let tenant_id: Uuid = row.get("tenant_id");
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
 
         sqlx::query(
             "UPDATE accounts
@@ -311,6 +355,14 @@ async fn place_pnd(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     let prev_status = if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
         let prev = acc.status;
         let _ = AccountManager::place_manual_pnd(acc, &dto.reason);
         if let Some(by_id) = accounts_by_id.get_mut(&acc.id.0) {
@@ -388,6 +440,18 @@ async fn lift_pnd(
             }
         };
 
+        let account_id: Uuid = row.get("id");
+        let tenant_id: Uuid = row.get("tenant_id");
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         let current_status: String = row.get("status");
         if current_status != "POST_NO_DEBIT" {
             return Err((
@@ -398,9 +462,6 @@ async fn lift_pnd(
                 })),
             ));
         }
-
-        let account_id: Uuid = row.get("id");
-        let tenant_id: Uuid = row.get("tenant_id");
 
         sqlx::query(
             "UPDATE accounts
@@ -479,6 +540,15 @@ async fn lift_pnd(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         if acc.status != AccountStatus::PostNoDebit {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -564,6 +634,24 @@ async fn activate_account(
         let account_id: Uuid = row.get("id");
         let tenant_id: Uuid = row.get("tenant_id");
 
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         sqlx::query(
             "UPDATE accounts
              SET status = 'ACTIVE',
@@ -643,6 +731,14 @@ async fn activate_account(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     let prev_status = if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
         let prev = acc.status;
         acc.status = AccountStatus::Active;
         acc.pnd_source = None;
@@ -725,6 +821,18 @@ async fn place_lien(
             }
         };
 
+        let account_id: Uuid = row.get("id");
+        let tenant_id: Uuid = row.get("tenant_id");
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         let available: Decimal = row.get("available_balance");
         if dto.amount > available {
             return Err((
@@ -734,9 +842,6 @@ async fn place_lien(
                 ),
             ));
         }
-
-        let account_id: Uuid = row.get("id");
-        let tenant_id: Uuid = row.get("tenant_id");
 
         sqlx::query(
             "UPDATE accounts
@@ -810,6 +915,14 @@ async fn place_lien(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
         if let Err(e) = AccountManager::place_lien(acc, dto.amount) {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -891,6 +1004,18 @@ async fn release_lien(
             }
         };
 
+        let account_id: Uuid = row.get("id");
+        let tenant_id: Uuid = row.get("tenant_id");
+
+        if auth.role() != "SUPER_ADMIN" && tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
+
         let active_lien: Decimal = row.get("lien_amount");
         if dto.amount > active_lien {
             return Err((
@@ -900,9 +1025,6 @@ async fn release_lien(
                 ),
             ));
         }
-
-        let account_id: Uuid = row.get("id");
-        let tenant_id: Uuid = row.get("tenant_id");
 
         sqlx::query(
             "UPDATE accounts
@@ -976,6 +1098,14 @@ async fn release_lien(
     let mut accounts_by_id = state.accounts_by_id.write().unwrap();
 
     if let Some(acc) = accounts.get_mut(&nuban) {
+        if auth.role() != "SUPER_ADMIN" && acc.tenant_id != auth.tenant_id() {
+            return Err((
+                StatusCode::NOT_FOUND,
+                Json(
+                    json!({ "status": "NOT_FOUND", "message": format!("Account {nuban} not found") }),
+                ),
+            ));
+        }
         if let Err(e) = AccountManager::release_lien(acc, dto.amount) {
             return Err((
                 StatusCode::BAD_REQUEST,

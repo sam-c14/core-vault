@@ -64,3 +64,13 @@ This document tracks execution milestones for CoreVault (Core Banking Applicatio
   - Account creation and lifecycle controls (`freeze`, `pnd`, `pnd/lift`, `activate`, `liens`, `liens/release`) executed as atomic DB transactions.
   - Strict authentication & authorization gating across all endpoints (`AuthClaims` extractor) enforcing Bearer JWT validation, role checks (`SUPER_ADMIN`, `OPERATIONS_OFFICER`, etc.), and scope checks (`transfers:write`, `accounts:read`, `accounts:write`, `admin:read`).
   - Purged all in-memory mock balance returns (e.g. 404 returned when account not found).
+
+- [x] **#9 — Tenant Header Architecture, Client Basic Auth Login & Strict Cross-Tenant Isolation**
+  - Extracted tenant identification to `x-tenant-id` HTTP header via axum extractor `TenantHeader`, removing `tenant_id` from JSON payloads and URL parameters.
+  - Implemented Client Login (`POST /api/v1/auth/client-login` and `POST /api/v1/auth/login` with `Authorization: Basic base64(client_id:client_secret)`) accepting tenant credentials in HTTP Basic Auth and business user `email` and `password` in JSON body, with strict Argon2id hash verification and tenant scoping.
+  - Guaranteed multi-tenant client-facing API isolation across all routes:
+    - Account lookup (`GET /api/v1/accounts/:nuban`) returns 404 Not Found if queried by another tenant.
+    - Account controls (`freeze`, `activate`, `pnd`, `pnd/lift`, `liens`, `liens/release`) return 404 Not Found on cross-tenant attempts.
+    - Intra-bank and outward transfers return 403 Forbidden if a caller attempts to debit an account belonging to another tenant.
+    - Custom tenant PND rules scoped strictly to the authenticated tenant.
+  - Created end-to-end integration test suite `tenant_header_and_isolation_test.rs` validating client Basic Auth login, header extraction, and rejection of all cross-tenant access attempts.

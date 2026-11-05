@@ -1,4 +1,4 @@
-use crate::middleware::AuthClaims;
+use crate::middleware::{AuthClaims, TenantHeader};
 use crate::state::AppState;
 use axum::{
     extract::{Path, State},
@@ -15,17 +15,21 @@ use uuid::Uuid;
 
 pub fn router(state: AppState) -> Router {
     Router::new()
-        .route("/api/v1/tenants/pnd-rules", post(create_pnd_rule))
+        .route(
+            "/api/v1/tenants/pnd-rules",
+            post(create_pnd_rule).get(list_pnd_rules),
+        )
         .route(
             "/api/v1/tenants/:tenant_id/pnd-rules",
-            get(list_tenant_pnd_rules),
+            get(list_tenant_pnd_rules_by_path),
         )
         .with_state(state)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CreatePndRuleDto {
-    pub tenant_id: Uuid,
+    #[serde(default)]
+    pub tenant_id: Option<Uuid>,
     pub rule_name: String,
     pub rule_type: PndRuleType,
     pub max_single_amount: Option<Decimal>,
@@ -53,6 +57,7 @@ fn str_to_pnd_rule_type(s: &str) -> PndRuleType {
 
 async fn create_pnd_rule(
     auth: AuthClaims,
+    tenant_hdr: TenantHeader,
     State(state): State<AppState>,
     Json(dto): Json<CreatePndRuleDto>,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
@@ -61,14 +66,14 @@ async fn create_pnd_rule(
         &["SUPER_ADMIN", "OPERATIONS_OFFICER", "COMPLIANCE_OFFICER"],
     )?;
 
-    if auth.role() != "SUPER_ADMIN" && auth.tenant_id() != dto.tenant_id {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(
-                json!({ "status": "FORBIDDEN", "message": "Cannot create rules for another tenant" }),
-            ),
-        ));
-    }
+    let target_tenant = if auth.role() == "SUPER_ADMIN" {
+        tenant_hdr
+            .id()
+            .or(dto.tenant_id)
+            .unwrap_or(auth.tenant_id())
+    } else {
+        tenant_hdr.resolve_for(&auth)?
+    };
 
     if dto.rule_name.trim().is_empty() {
         return Err((
@@ -111,7 +116,7 @@ async fn create_pnd_rule(
             ) VALUES ($1, $2, $3, $4, $5, $6, 'SYSTEM_AUTOMATED_PND', $7, NOW())",
         )
         .bind(rule_id)
-        .bind(dto.tenant_id)
+        .bind(target_tenant)
         .bind(&dto.rule_name)
         .bind(rule_type_str)
         .bind(dto.max_single_amount)
@@ -137,7 +142,7 @@ async fn create_pnd_rule(
              VALUES ($1, $2, $3, 'USER', 'CREATE_PND_RULE', 'TENANT_RULE', $4, $5, NOW())"
         )
         .bind(Uuid::new_v4())
-        .bind(dto.tenant_id)
+        .bind(target_tenant)
         .bind(auth.user_id())
         .bind(rule_id)
         .bind(audit_payload)
@@ -147,7 +152,7 @@ async fn create_pnd_rule(
 
     let rule = TenantPndRule {
         id: rule_id,
-        tenant_id: dto.tenant_id,
+        tenant_id: target_tenant,
         rule_name: dto.rule_name,
         rule_type: dto.rule_type,
         max_single_amount: dto.max_single_amount,
@@ -170,7 +175,31 @@ async fn create_pnd_rule(
     ))
 }
 
-async fn list_tenant_pnd_rules(
+async fn list_pnd_rules(
+    auth: AuthClaims,
+    tenant_hdr: TenantHeader,
+    State(state): State<AppState>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    auth.require_scope_or_role(
+        "accounts:read",
+        &[
+            "SUPER_ADMIN",
+            "OPERATIONS_OFFICER",
+            "COMPLIANCE_OFFICER",
+            "AUDITOR",
+        ],
+    )?;
+
+    let target_tenant = if auth.role() == "SUPER_ADMIN" {
+        tenant_hdr.id()
+    } else {
+        Some(tenant_hdr.resolve_for(&auth)?)
+    };
+
+    fetch_rules_for_tenant(&state, target_tenant).await
+}
+
+async fn list_tenant_pnd_rules_by_path(
     auth: AuthClaims,
     State(state): State<AppState>,
     Path(tenant_id): Path<Uuid>,
@@ -194,16 +223,33 @@ async fn list_tenant_pnd_rules(
         ));
     }
 
+    fetch_rules_for_tenant(&state, Some(tenant_id)).await
+}
+
+async fn fetch_rules_for_tenant(
+    state: &AppState,
+    target_tenant: Option<Uuid>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
     if let Some(pool) = &state.pool {
-        let rows = sqlx::query(
-            "SELECT id, tenant_id, rule_name, rule_type, max_single_amount, max_daily_cumulative, is_enabled
-             FROM tenant_pnd_rules
-             WHERE tenant_id = $1
-             ORDER BY created_at DESC"
-        )
-        .bind(tenant_id)
-        .fetch_all(pool)
-        .await
+        let rows = if let Some(tid) = target_tenant {
+            sqlx::query(
+                "SELECT id, tenant_id, rule_name, rule_type, max_single_amount, max_daily_cumulative, is_enabled
+                 FROM tenant_pnd_rules
+                 WHERE tenant_id = $1
+                 ORDER BY created_at DESC"
+            )
+            .bind(tid)
+            .fetch_all(pool)
+            .await
+        } else {
+            sqlx::query(
+                "SELECT id, tenant_id, rule_name, rule_type, max_single_amount, max_daily_cumulative, is_enabled
+                 FROM tenant_pnd_rules
+                 ORDER BY created_at DESC"
+            )
+            .fetch_all(pool)
+            .await
+        }
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -231,24 +277,28 @@ async fn list_tenant_pnd_rules(
             StatusCode::OK,
             Json(json!({
                 "status": "SUCCESS",
-                "tenant_id": tenant_id,
+                "tenant_id": target_tenant,
                 "rules": tenant_rules
             })),
         ));
     }
 
     let rules = state.pnd_rules.read().unwrap();
-    let tenant_rules: Vec<TenantPndRule> = rules
-        .iter()
-        .filter(|r| r.tenant_id == tenant_id)
-        .cloned()
-        .collect();
+    let tenant_rules: Vec<TenantPndRule> = if let Some(tid) = target_tenant {
+        rules
+            .iter()
+            .filter(|r| r.tenant_id == tid)
+            .cloned()
+            .collect()
+    } else {
+        rules.clone()
+    };
 
     Ok((
         StatusCode::OK,
         Json(json!({
             "status": "SUCCESS",
-            "tenant_id": tenant_id,
+            "tenant_id": target_tenant,
             "rules": tenant_rules
         })),
     ))

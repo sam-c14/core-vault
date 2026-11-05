@@ -11,7 +11,8 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateAccountDto {
-    pub tenant_id: Uuid,
+    #[serde(default)]
+    pub tenant_id: Option<Uuid>,
     pub customer_id: Option<Uuid>,
     pub account_name: String,
     pub gl_code: String,
@@ -26,13 +27,21 @@ pub struct AccountManager;
 
 impl AccountManager {
     pub fn build_new_account(dto: CreateAccountDto) -> CoreResult<AccountRecord> {
+        let tenant_id = dto.tenant_id.unwrap_or_else(Uuid::nil);
+        Self::build_new_account_with_tenant(dto, tenant_id)
+    }
+
+    pub fn build_new_account_with_tenant(
+        dto: CreateAccountDto,
+        tenant_id: Uuid,
+    ) -> CoreResult<AccountRecord> {
         let account_number = generate_nuban(&dto.bank_code, dto.serial_number)
             .map_err(|e| CoreError::InvalidAccountNumber(e.to_string()))?;
 
         let now = Utc::now();
         Ok(AccountRecord {
             id: AccountId::new(),
-            tenant_id: dto.tenant_id,
+            tenant_id,
             customer_id: dto.customer_id,
             account_number,
             account_name: dto.account_name,
@@ -153,7 +162,7 @@ mod tests {
     #[test]
     fn test_create_account_with_valid_nuban() {
         let dto = CreateAccountDto {
-            tenant_id: Uuid::new_v4(),
+            tenant_id: Some(Uuid::new_v4()),
             customer_id: Some(Uuid::new_v4()),
             account_name: "Chukwudi Okafor".to_string(),
             gl_code: "2110001".to_string(),
@@ -174,7 +183,7 @@ mod tests {
     #[test]
     fn test_lien_placement_and_release() {
         let mut account = AccountManager::build_new_account(CreateAccountDto {
-            tenant_id: Uuid::new_v4(),
+            tenant_id: Some(Uuid::new_v4()),
             customer_id: None,
             account_name: "Merchant Escrow".to_string(),
             gl_code: "2110003".to_string(),
@@ -208,7 +217,7 @@ mod tests {
     #[test]
     fn test_account_status_withdrawal_permissions() {
         let mut account = AccountManager::build_new_account(CreateAccountDto {
-            tenant_id: Uuid::new_v4(),
+            tenant_id: Some(Uuid::new_v4()),
             customer_id: None,
             account_name: "Restricted Account".to_string(),
             gl_code: "2110001".to_string(),
@@ -242,7 +251,7 @@ mod tests {
     fn test_manual_and_system_pnd_and_lifting() {
         let tenant_id = Uuid::new_v4();
         let mut account = AccountManager::build_new_account(CreateAccountDto {
-            tenant_id,
+            tenant_id: Some(tenant_id),
             customer_id: None,
             account_name: "PND Test Account".to_string(),
             gl_code: "2110001".to_string(),

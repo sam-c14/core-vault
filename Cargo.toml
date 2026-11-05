@@ -59,6 +59,7 @@ toml = "0.8"
 # Security & Cryptography
 argon2 = "0.5"
 jsonwebtoken = "9.3"
+base64 = "0.22"
 
 # Error Handling & Utilities
 thiserror = "1.0"
