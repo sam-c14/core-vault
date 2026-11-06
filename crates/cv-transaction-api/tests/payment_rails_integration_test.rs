@@ -138,3 +138,176 @@ async fn test_direct_payment_gateway_unit_methods() {
     assert_eq!(receipt.response_code, "00");
     assert!(receipt.session_id.starts_with("tra_"));
 }
+
+#[tokio::test]
+async fn test_paystack_payment_rail_full_lifecycle() {
+    let app = create_router();
+    let token = generate_test_admin_token();
+
+    // 1. Inspect registered rails — verify both Anchor and Paystack are present
+    let rails_req = Request::builder()
+        .method(Method::GET)
+        .uri("/api/v1/payment-rails")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+
+    let rails_res = app.clone().oneshot(rails_req).await.unwrap();
+    assert_eq!(rails_res.status(), StatusCode::OK);
+    let body_bytes = rails_res.into_body().collect().await.unwrap().to_bytes();
+    let rails_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    let registered = rails_json["registered_providers"].as_array().unwrap();
+    assert!(registered.iter().any(|p| p == "Anchor"));
+    assert!(registered.iter().any(|p| p == "Paystack"));
+
+    // 2. Switch Active Payment Rail to Paystack
+    let switch_payload = json!({ "provider": "Paystack" });
+    let switch_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/admin/payment-rails/active")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&switch_payload).unwrap()))
+        .unwrap();
+
+    let switch_res = app.clone().oneshot(switch_req).await.unwrap();
+    assert_eq!(switch_res.status(), StatusCode::OK);
+    let body_bytes = switch_res.into_body().collect().await.unwrap().to_bytes();
+    let switch_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(switch_json["status"], "SUCCESS");
+    assert_eq!(switch_json["active_provider"], "Paystack");
+
+    // 3. Check Settlement Balance on Paystack
+    let balance_req = Request::builder()
+        .method(Method::GET)
+        .uri("/api/v1/payment-rails/balance?currency=NGN")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+
+    let balance_res = app.clone().oneshot(balance_req).await.unwrap();
+    assert_eq!(balance_res.status(), StatusCode::OK);
+    let body_bytes = balance_res.into_body().collect().await.unwrap().to_bytes();
+    let balance_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(balance_json["status"], "SUCCESS");
+    assert_eq!(balance_json["active_provider"], "Paystack");
+    assert_eq!(balance_json["currency"], "NGN");
+    assert_eq!(balance_json["balance"], "25000000");
+
+    // 4. Perform Name Enquiry via Paystack Rail
+    let enquiry_payload = json!({
+        "bank_code": "058",
+        "account_number": "0580001237"
+    });
+
+    let enquiry_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/transfers/enquiry")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&enquiry_payload).unwrap()))
+        .unwrap();
+
+    let enquiry_res = app.clone().oneshot(enquiry_req).await.unwrap();
+    assert_eq!(enquiry_res.status(), StatusCode::OK);
+    let body_bytes = enquiry_res.into_body().collect().await.unwrap().to_bytes();
+    let enquiry_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(enquiry_json["status"], "SUCCESS");
+    assert_eq!(enquiry_json["provider"], "Paystack");
+    assert_eq!(
+        enquiry_json["data"]["account_name"],
+        "COREVAULT PAYSTACK BENEFICIARY"
+    );
+
+    // 5. Create Transfer Recipient
+    let recipient_payload = json!({
+        "name": "Jane Doe",
+        "account_number": "0581111111",
+        "bank_code": "058",
+        "currency": "NGN",
+        "description": "Vendor payout recipient"
+    });
+
+    let recipient_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/transfers/recipients")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&recipient_payload).unwrap()))
+        .unwrap();
+
+    let recipient_res = app.clone().oneshot(recipient_req).await.unwrap();
+    assert_eq!(recipient_res.status(), StatusCode::CREATED);
+    let body_bytes = recipient_res
+        .into_body()
+        .collect()
+        .await
+        .unwrap()
+        .to_bytes();
+    let recipient_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(recipient_json["status"], "SUCCESS");
+    let recipient_code = recipient_json["data"]["recipient_code"].as_str().unwrap();
+    assert!(recipient_code.starts_with("RCP_paystack_"));
+
+    // 6. Dispatch Outward Transfer via Paystack Rail
+    let outward_payload = json!({
+        "source_account_id": "00000000-0000-0000-0000-000000000001",
+        "destination_account": "0582222222",
+        "destination_bank_code": "058",
+        "amount": "45000.00",
+        "currency": "NGN",
+        "narration": "Vendor payout via Paystack single transfer"
+    });
+
+    let outward_req = Request::builder()
+        .method(Method::POST)
+        .uri("/api/v1/transfers/outward")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(serde_json::to_vec(&outward_payload).unwrap()))
+        .unwrap();
+
+    let outward_res = app.clone().oneshot(outward_req).await.unwrap();
+    assert_eq!(outward_res.status(), StatusCode::CREATED);
+    let body_bytes = outward_res.into_body().collect().await.unwrap().to_bytes();
+    let outward_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(outward_json["status"], "SUCCESS");
+    assert_eq!(outward_json["provider"], "Paystack");
+    let session_id = outward_json["data"]["session_id"].as_str().unwrap();
+    assert!(session_id.starts_with("TRF_ps_"));
+    let txn_ref = outward_json["data"]["reference"].as_str().unwrap();
+
+    // 7. Verify Outward Transfer by Reference
+    let verify_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/api/v1/transfers/verify/{}", txn_ref))
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+
+    let verify_res = app.clone().oneshot(verify_req).await.unwrap();
+    assert_eq!(verify_res.status(), StatusCode::OK);
+    let body_bytes = verify_res.into_body().collect().await.unwrap().to_bytes();
+    let verify_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(verify_json["status"], "SUCCESS");
+    assert_eq!(verify_json["active_provider"], "Paystack");
+    assert_eq!(verify_json["reference"], txn_ref);
+    assert_eq!(verify_json["response_code"], "00");
+
+    // 8. List Supported Commercial Banks
+    let banks_req = Request::builder()
+        .method(Method::GET)
+        .uri("/api/v1/transfers/banks")
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+
+    let banks_res = app.clone().oneshot(banks_req).await.unwrap();
+    assert_eq!(banks_res.status(), StatusCode::OK);
+    let body_bytes = banks_res.into_body().collect().await.unwrap().to_bytes();
+    let banks_json: Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert_eq!(banks_json["status"], "SUCCESS");
+    let banks = banks_json["banks"].as_array().unwrap();
+    assert!(banks.len() >= 5);
+    assert!(banks.iter().any(|b| b["code"] == "058"));
+}

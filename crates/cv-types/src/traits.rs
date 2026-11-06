@@ -37,6 +37,20 @@ pub trait PaymentRailAdapter: Send + Sync {
         account_number: &str,
     ) -> CoreResult<AccountEnquiry>;
     async fn dispatch_outward(&self, transfer: &OutwardTransfer) -> CoreResult<TransferReceipt>;
+
+    /// Optional balance enquiry on the rail adapter settlement account.
+    async fn check_balance(&self, _currency: &str) -> CoreResult<Decimal> {
+        Err(crate::errors::CoreError::PaymentRailError(
+            "Balance enquiry not supported by this rail adapter".to_string(),
+        ))
+    }
+
+    /// Optional transfer status verification by external transaction reference.
+    async fn verify_transfer(&self, _reference: &str) -> CoreResult<TransferReceipt> {
+        Err(crate::errors::CoreError::PaymentRailError(
+            "Transfer verification not supported by this rail adapter".to_string(),
+        ))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

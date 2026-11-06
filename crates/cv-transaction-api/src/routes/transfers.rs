@@ -1,7 +1,7 @@
 use crate::middleware::AuthClaims;
 use crate::state::AppState;
 use axum::{
-    extract::State,
+    extract::{Path, Query, State},
     http::StatusCode,
     routing::{get, post},
     Json, Router,
@@ -26,7 +26,17 @@ pub fn router(state: AppState) -> Router {
         .route("/api/v1/transfers/intra", post(post_intra_transfer))
         .route("/api/v1/transfers/enquiry", post(name_enquiry))
         .route("/api/v1/transfers/outward", post(post_outward_transfer))
+        .route(
+            "/api/v1/transfers/verify/:reference",
+            get(verify_rail_transfer),
+        )
+        .route(
+            "/api/v1/transfers/recipients",
+            post(create_transfer_recipient),
+        )
+        .route("/api/v1/transfers/banks", get(list_supported_banks))
         .route("/api/v1/payment-rails", get(get_payment_rails))
+        .route("/api/v1/payment-rails/balance", get(get_rail_balance))
         .route("/api/v1/admin/payment-rails/active", post(set_active_rail))
         .with_state(state)
 }
@@ -1004,6 +1014,7 @@ async fn set_active_rail(
 
     let provider = match dto.provider.trim() {
         "Anchor" => PaymentRailProvider::Anchor,
+        "Paystack" => PaymentRailProvider::Paystack,
         "NibssDirect" => PaymentRailProvider::NibssDirect,
         other => PaymentRailProvider::Custom(other.to_string()),
     };
@@ -1027,6 +1038,169 @@ async fn set_active_rail(
             "status": "SUCCESS",
             "message": format!("Payment rail successfully switched to {}", provider),
             "active_provider": provider.to_string()
+        })),
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct RailBalanceQuery {
+    pub currency: Option<String>,
+}
+
+async fn get_rail_balance(
+    auth: AuthClaims,
+    State(state): State<AppState>,
+    Query(query): Query<RailBalanceQuery>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    auth.require_scope_or_role("transfers:read", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
+
+    let currency = query.currency.unwrap_or_else(|| "NGN".to_string());
+    let active = state.payment_gateway.active_provider();
+    let balance = state
+        .payment_gateway
+        .check_balance(&currency)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "status": "BALANCE_CHECK_FAILED",
+                    "error": e.to_string()
+                })),
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "status": "SUCCESS",
+            "active_provider": active.to_string(),
+            "currency": currency,
+            "balance": balance.to_string(),
+        })),
+    ))
+}
+
+async fn verify_rail_transfer(
+    auth: AuthClaims,
+    State(state): State<AppState>,
+    Path(reference): Path<String>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    auth.require_scope_or_role("transfers:read", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
+
+    let active = state.payment_gateway.active_provider();
+    let receipt = state
+        .payment_gateway
+        .verify_transfer(&reference)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(json!({
+                    "status": "TRANSFER_VERIFICATION_FAILED",
+                    "error": e.to_string()
+                })),
+            )
+        })?;
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "status": "SUCCESS",
+            "active_provider": active.to_string(),
+            "reference": reference,
+            "session_id": receipt.session_id,
+            "response_code": receipt.response_code,
+            "message": receipt.message,
+        })),
+    ))
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CreateRecipientDto {
+    pub name: String,
+    pub account_number: String,
+    pub bank_code: String,
+    pub recipient_type: Option<String>,
+    pub currency: Option<String>,
+    pub description: Option<String>,
+}
+
+async fn create_transfer_recipient(
+    auth: AuthClaims,
+    State(state): State<AppState>,
+    Json(dto): Json<CreateRecipientDto>,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    auth.require_scope_or_role("transfers:write", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
+
+    if dto.account_number.len() != 10 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "VALIDATION_FAILED",
+                "error": "Account number must be 10 digits"
+            })),
+        ));
+    }
+
+    if dto.bank_code.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "status": "VALIDATION_FAILED",
+                "error": "Bank code cannot be empty"
+            })),
+        ));
+    }
+
+    let active = state.payment_gateway.active_provider();
+    let recipient_code = format!(
+        "RCP_{}_{}",
+        active.to_string().to_lowercase(),
+        Uuid::new_v4().simple()
+    );
+
+    Ok((
+        StatusCode::CREATED,
+        Json(json!({
+            "status": "SUCCESS",
+            "active_provider": active.to_string(),
+            "data": {
+                "recipient_code": recipient_code,
+                "name": dto.name,
+                "account_number": dto.account_number,
+                "bank_code": dto.bank_code,
+                "currency": dto.currency.unwrap_or_else(|| "NGN".to_string()),
+                "recipient_type": dto.recipient_type.unwrap_or_else(|| "nuban".to_string()),
+                "description": dto.description,
+            }
+        })),
+    ))
+}
+
+async fn list_supported_banks(
+    auth: AuthClaims,
+) -> Result<(StatusCode, Json<Value>), (StatusCode, Json<Value>)> {
+    auth.require_scope_or_role("transfers:read", &["SUPER_ADMIN", "OPERATIONS_OFFICER"])?;
+
+    let banks = vec![
+        json!({ "name": "Access Bank", "code": "044" }),
+        json!({ "name": "Guaranty Trust Bank", "code": "058" }),
+        json!({ "name": "Zenith Bank", "code": "057" }),
+        json!({ "name": "First Bank of Nigeria", "code": "011" }),
+        json!({ "name": "United Bank For Africa", "code": "033" }),
+        json!({ "name": "Fidelity Bank", "code": "070" }),
+        json!({ "name": "Stanbic IBTC Bank", "code": "221" }),
+        json!({ "name": "Sterling Bank", "code": "232" }),
+        json!({ "name": "Union Bank of Nigeria", "code": "032" }),
+        json!({ "name": "Wema Bank", "code": "035" }),
+    ];
+
+    Ok((
+        StatusCode::OK,
+        Json(json!({
+            "status": "SUCCESS",
+            "banks": banks
         })),
     ))
 }

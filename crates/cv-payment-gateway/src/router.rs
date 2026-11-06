@@ -1,7 +1,9 @@
 use async_trait::async_trait;
 use cv_rail_anchor::AnchorRailAdapter;
+use cv_rail_paystack::PaystackRailAdapter;
 use cv_types::traits::{AccountEnquiry, OutwardTransfer, PaymentRailAdapter, TransferReceipt};
 use cv_types::{CoreError, CoreResult};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -10,6 +12,8 @@ use std::sync::{Arc, RwLock};
 pub enum PaymentRailProvider {
     /// Anchor Banking-as-a-Service (Default for MVP, fintechs, & SMEs)
     Anchor,
+    /// Paystack Transfers & Banking Infrastructure (First-class payment rail)
+    Paystack,
     /// Direct NIBSS Instant Payments switch (Available via cba-enterprise cv-rail-nip)
     NibssDirect,
     /// Custom third-party or proprietary payment rail adapter
@@ -20,6 +24,7 @@ impl std::fmt::Display for PaymentRailProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Anchor => write!(f, "Anchor"),
+            Self::Paystack => write!(f, "Paystack"),
             Self::NibssDirect => write!(f, "NibssDirect"),
             Self::Custom(name) => write!(f, "Custom({})", name),
         }
@@ -50,6 +55,12 @@ impl PaymentGateway {
     pub fn anchor_default() -> Self {
         let anchor = Arc::new(AnchorRailAdapter::sandbox());
         Self::new(PaymentRailProvider::Anchor, anchor)
+    }
+
+    /// Creates a gateway configured for Paystack in sandbox mode by default.
+    pub fn paystack_default() -> Self {
+        let paystack = Arc::new(PaystackRailAdapter::sandbox());
+        Self::new(PaymentRailProvider::Paystack, paystack)
     }
 
     /// Registers a payment rail provider and its adapter.
@@ -122,5 +133,15 @@ impl PaymentRailAdapter for PaymentGateway {
     async fn dispatch_outward(&self, transfer: &OutwardTransfer) -> CoreResult<TransferReceipt> {
         let adapter = self.current_adapter()?;
         adapter.dispatch_outward(transfer).await
+    }
+
+    async fn check_balance(&self, currency: &str) -> CoreResult<Decimal> {
+        let adapter = self.current_adapter()?;
+        adapter.check_balance(currency).await
+    }
+
+    async fn verify_transfer(&self, reference: &str) -> CoreResult<TransferReceipt> {
+        let adapter = self.current_adapter()?;
+        adapter.verify_transfer(reference).await
     }
 }

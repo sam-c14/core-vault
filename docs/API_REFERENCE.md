@@ -826,6 +826,204 @@ curl -X POST http://127.0.0.1:8080/api/v1/transfers/intra \
   }'
 ```
 
+### 5.2 Name Enquiry (Beneficiary Identity Verification)
+Verifies beneficiary account name via the currently active payment rail (Paystack `/bank/resolve` or Anchor BaaS).
+
+- **Method:** `POST`
+- **Path:** `/api/v1/transfers/enquiry`
+
+#### Request Body
+```json
+{
+  "bank_code": "058",
+  "account_number": "0580001237"
+}
+```
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "provider": "Paystack",
+  "data": {
+    "account_number": "0580001237",
+    "account_name": "COREVAULT PAYSTACK BENEFICIARY",
+    "bank_code": "058",
+    "kyc_tier": 3
+  }
+}
+```
+
+### 5.3 Single Outward Transfer Dispatch
+Initiates an outward NIP/inter-bank single payout via the currently active payment rail.
+
+- **Method:** `POST`
+- **Path:** `/api/v1/transfers/outward`
+
+#### Request Body
+```json
+{
+  "source_account_id": "00000000-0000-0000-0000-000000000001",
+  "destination_account": "0582222222",
+  "destination_bank_code": "058",
+  "amount": "15000.00",
+  "currency": "NGN",
+  "narration": "Vendor payout via Paystack single transfer"
+}
+```
+
+#### Response (Success)
+- **Status:** `201 Created`
+```json
+{
+  "status": "SUCCESS",
+  "provider": "Paystack",
+  "data": {
+    "transaction_id": "d0000000-0000-0000-0000-000000000099",
+    "reference": "TXN_OUT_b4f91c78",
+    "session_id": "TRF_ps_9a7d2e4f",
+    "response_code": "00",
+    "message": "Paystack single transfer dispatched successfully for 1500000 kobo (ref: TXN_OUT_b4f91c78)",
+    "amount": "15000.00",
+    "currency": "NGN",
+    "destination_account": "0582222222",
+    "destination_bank_code": "058"
+  }
+}
+```
+
+### 5.4 Create Transfer Recipient
+Pre-registers a payout beneficiary with the active rail adapter (Paystack `/transferrecipient`).
+
+- **Method:** `POST`
+- **Path:** `/api/v1/transfers/recipients`
+
+#### Request Body
+```json
+{
+  "name": "Jane Doe",
+  "account_number": "0581111111",
+  "bank_code": "058",
+  "currency": "NGN",
+  "description": "Vendor payout recipient"
+}
+```
+
+#### Response (Success)
+- **Status:** `201 Created`
+```json
+{
+  "status": "SUCCESS",
+  "active_provider": "Paystack",
+  "data": {
+    "recipient_code": "RCP_paystack_b7e95f68b31c",
+    "name": "Jane Doe",
+    "account_number": "0581111111",
+    "bank_code": "058",
+    "currency": "NGN",
+    "recipient_type": "nuban",
+    "description": "Vendor payout recipient"
+  }
+}
+```
+
+### 5.5 Verify Outward Transfer Status
+Queries the definitive settlement status of an outward payout by transaction reference.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/transfers/verify/:reference`
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "active_provider": "Paystack",
+  "reference": "TXN_OUT_b4f91c78",
+  "session_id": "TRF_ver_TXN_OUT_b4f91c78",
+  "response_code": "00",
+  "message": "Paystack transfer reference 'TXN_OUT_b4f91c78' verified successfully with status 'success'"
+}
+```
+
+### 5.6 List Supported Commercial Banks
+Returns the directory of commercial banks and CBN routing codes.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/transfers/banks`
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "banks": [
+    {"name": "Access Bank", "code": "044"},
+    {"name": "Guaranty Trust Bank", "code": "058"},
+    {"name": "Zenith Bank", "code": "057"},
+    {"name": "First Bank of Nigeria", "code": "011"},
+    {"name": "United Bank For Africa", "code": "033"}
+  ]
+}
+```
+
+### 5.7 List Payment Rails
+Lists all registered payment rail providers and the current active provider.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/payment-rails`
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "active_provider": "Anchor",
+  "registered_providers": ["Anchor", "Paystack"]
+}
+```
+
+### 5.8 Switch Active Payment Rail
+Switches the active payment rail router at runtime (Super Admin only).
+
+- **Method:** `POST`
+- **Path:** `/api/v1/admin/payment-rails/active`
+
+#### Request Body
+```json
+{
+  "provider": "Paystack"
+}
+```
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "message": "Payment rail successfully switched to Paystack",
+  "active_provider": "Paystack"
+}
+```
+
+### 5.9 Query Active Rail Settlement Balance
+Inspects the operational settlement balance with the active payment rail.
+
+- **Method:** `GET`
+- **Path:** `/api/v1/payment-rails/balance?currency=NGN`
+
+#### Response (Success)
+- **Status:** `200 OK`
+```json
+{
+  "status": "SUCCESS",
+  "active_provider": "Paystack",
+  "currency": "NGN",
+  "balance": "25000000"
+}
+```
+
 ---
 
 ## Section 6: Multi-Country Platformization

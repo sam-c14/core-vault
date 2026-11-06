@@ -93,6 +93,77 @@ mod tests {
         assert_eq!(receipt.session_id, "custom_GW-CUSTOM-001");
     }
 
+    #[tokio::test]
+    async fn test_default_gateway_routes_to_paystack() {
+        let gateway = PaymentGateway::paystack_default();
+        assert_eq!(gateway.active_provider(), PaymentRailProvider::Paystack);
+
+        // Name enquiry through Paystack
+        let enquiry = gateway.name_enquiry("058", "0580001237").await.unwrap();
+        assert_eq!(enquiry.account_name, "COREVAULT PAYSTACK BENEFICIARY");
+
+        // Outward transfer through Paystack
+        let transfer = OutwardTransfer {
+            transaction_ref: "GW-PS-001".to_string(),
+            source_account: "0581111111".to_string(),
+            destination_account: "0582222222".to_string(),
+            destination_bank_code: "058".to_string(),
+            amount: dec!(35000.00),
+            narration: "Vendor payment via Paystack".to_string(),
+        };
+
+        let receipt = gateway.dispatch_outward(&transfer).await.unwrap();
+        assert_eq!(receipt.response_code, "00");
+        assert!(receipt.session_id.starts_with("TRF_ps_"));
+
+        // Balance check through Paystack
+        let balance = gateway.check_balance("NGN").await.unwrap();
+        assert_eq!(balance, dec!(25000000.00));
+
+        // Transfer verification through Paystack
+        let verified = gateway.verify_transfer("GW-PS-001").await.unwrap();
+        assert_eq!(verified.response_code, "00");
+        assert_eq!(verified.session_id, "TRF_ver_GW-PS-001");
+    }
+
+    #[tokio::test]
+    async fn test_switch_between_anchor_and_paystack() {
+        let gateway = PaymentGateway::anchor_default();
+        gateway.register_provider(
+            PaymentRailProvider::Paystack,
+            Arc::new(cv_rail_paystack::PaystackRailAdapter::sandbox()),
+        );
+
+        // Initially Anchor
+        assert_eq!(gateway.active_provider(), PaymentRailProvider::Anchor);
+        let t1 = OutwardTransfer {
+            transaction_ref: "SWITCH-01".to_string(),
+            source_account: "0440001237".to_string(),
+            destination_account: "0440001230".to_string(),
+            destination_bank_code: "044".to_string(),
+            amount: dec!(5000.00),
+            narration: "Anchor leg".to_string(),
+        };
+        let r1 = gateway.dispatch_outward(&t1).await.unwrap();
+        assert!(r1.session_id.starts_with("tra_"));
+
+        // Switch to Paystack
+        gateway
+            .set_active_provider(PaymentRailProvider::Paystack)
+            .unwrap();
+        assert_eq!(gateway.active_provider(), PaymentRailProvider::Paystack);
+        let t2 = OutwardTransfer {
+            transaction_ref: "SWITCH-02".to_string(),
+            source_account: "0581111111".to_string(),
+            destination_account: "0582222222".to_string(),
+            destination_bank_code: "058".to_string(),
+            amount: dec!(7500.00),
+            narration: "Paystack leg".to_string(),
+        };
+        let r2 = gateway.dispatch_outward(&t2).await.unwrap();
+        assert!(r2.session_id.starts_with("TRF_ps_"));
+    }
+
     #[test]
     fn test_unregistered_nibss_direct_switch_returns_clear_error() {
         let gateway = PaymentGateway::anchor_default();

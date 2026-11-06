@@ -74,3 +74,26 @@ This document tracks execution milestones for CoreVault (Core Banking Applicatio
     - Intra-bank and outward transfers return 403 Forbidden if a caller attempts to debit an account belonging to another tenant.
     - Custom tenant PND rules scoped strictly to the authenticated tenant.
   - Created end-to-end integration test suite `tenant_header_and_isolation_test.rs` validating client Basic Auth login, header extraction, and rejection of all cross-tenant access attempts.
+
+- [x] **#10 — Paystack Payment Rail Adapter, Pluggable Rail Router & Postman Documentation Suite**
+  - Implemented `cv-rail-paystack` crate:
+    - Zero Floating Point precision conversions (`decimal_to_kobo`, `kobo_to_decimal`).
+    - Paystack DTOs for account resolution (`/bank/resolve`), transfer recipient creation (`/transferrecipient`), single transfer initiation (`/transfer`), balance check (`/balance`), transfer status verification (`/transfer/verify/:reference`), commercial bank routing directory (`/bank`), and transfer finalization (`/transfer/finalize_transfer`).
+    - Implemented `PaymentRailAdapter` for `PaystackRailAdapter` with deterministic sandbox simulation mode and live credential support.
+  - Enhanced `cv-payment-gateway` and `PaymentGateway`:
+    - Added first-class `PaymentRailProvider::Paystack` enum variant.
+    - Added `check_balance` and `verify_transfer` default methods to `PaymentRailAdapter` trait.
+    - Supported runtime payment rail switching between `Anchor` and `Paystack` via `POST /api/v1/admin/payment-rails/active`.
+  - Expanded `cv-transaction-api` with multi-rail endpoints:
+    - `GET /api/v1/payment-rails/balance`: Real-time operational settlement account balance check across active rails.
+    - `GET /api/v1/transfers/verify/:reference`: External transaction reference verification on active rail.
+    - `POST /api/v1/transfers/recipients`: Payout recipient registration returning `RCP_...` code.
+    - `GET /api/v1/transfers/banks`: Commercial bank directory and CBN routing codes.
+  - Integration and unit test suites:
+    - Unit tests in `cv-rail-paystack` (conversions, name enquiry, recipient creation, transfer dispatch, balance, verify, bank listing).
+    - Gateway tests in `cv-payment-gateway` (routing to Paystack, switching between Anchor and Paystack).
+    - Comprehensive lifecycle integration tests in `crates/cv-transaction-api/tests/payment_rails_integration_test.rs`.
+  - Comprehensive Postman & Newman Suite Update:
+    - Re-organized collection into 10 domains with 45 requests, detailed descriptions for every folder, and standardized `mode: "raw"` JSON formatting on every POST, PUT, and PATCH request.
+    - Embedded `x-tenant-id` header injection and Client Basic Auth login request.
+    - Updated `postman/corevault_environment.json` and `postman/README.md`.

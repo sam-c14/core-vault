@@ -88,4 +88,32 @@ impl PaymentRailAdapter for AnchorRailAdapter {
             "Live Anchor transfer dispatch requires active credentials".to_string(),
         ))
     }
+
+    async fn check_balance(&self, _currency: &str) -> CoreResult<Decimal> {
+        if self.config.is_sandbox {
+            // Anchor Sandbox Settlement Balance (50,000,000.00 NGN)
+            return Ok(Decimal::from(50_000_000));
+        }
+
+        Err(CoreError::PaymentRailError(
+            "Live Anchor balance enquiry requires active credentials".to_string(),
+        ))
+    }
+
+    async fn verify_transfer(&self, reference: &str) -> CoreResult<TransferReceipt> {
+        if self.config.is_sandbox {
+            return Ok(TransferReceipt {
+                session_id: format!("tra_ver_{}", reference),
+                response_code: "00".to_string(),
+                message: format!(
+                    "Anchor transfer reference '{}' verified successfully with status 'success'",
+                    reference
+                ),
+            });
+        }
+
+        Err(CoreError::PaymentRailError(
+            "Live Anchor transfer verification requires active credentials".to_string(),
+        ))
+    }
 }

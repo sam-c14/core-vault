@@ -2,7 +2,8 @@ use chrono::Utc;
 use cv_account_manager::AccountRecord;
 use cv_audit::MemoryAuditSink;
 use cv_auth::{hash_password, JwtService};
-use cv_payment_gateway::PaymentGateway;
+use cv_payment_gateway::{PaymentGateway, PaymentRailProvider};
+use cv_rail_paystack::PaystackRailAdapter;
 use cv_types::{
     AccountId, AccountStatus, AccountType, Currency, TenantPndRule, TenantRecord, TenantStatus,
 };
@@ -143,7 +144,12 @@ impl AppState {
         accounts_by_id.insert(acc1_id, acc1);
         accounts_by_id.insert(acc2_id, acc2);
 
-        let payment_gateway = Arc::new(PaymentGateway::anchor_default());
+        let payment_gateway = PaymentGateway::anchor_default();
+        payment_gateway.register_provider(
+            PaymentRailProvider::Paystack,
+            Arc::new(PaystackRailAdapter::sandbox()),
+        );
+        let payment_gateway = Arc::new(payment_gateway);
 
         Self {
             pool,

@@ -9,6 +9,7 @@ description = "Agnostic payment gateway router supporting pluggable adapters wit
 [dependencies]
 cv-types = { workspace = true }
 cv-rail-anchor = { workspace = true }
+cv-rail-paystack = { workspace = true }
 rust_decimal = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

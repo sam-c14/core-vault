@@ -14,6 +14,7 @@ cv-audit = { workspace = true }
 cv-auth = { workspace = true }
 cv-platform-config-parser = { workspace = true }
 cv-rail-anchor = { workspace = true }
+cv-rail-paystack = { workspace = true }
 cv-payment-gateway = { workspace = true }
 
 
